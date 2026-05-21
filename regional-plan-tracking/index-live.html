@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Lake Tahoe Regional Plan - Tracking Development in the Tahoe Basin</title>
+
+<!-- SEO + share preview metadata. og:image and og:url should be swapped to
+     the real public URL once the page is hosted under trpa.gov or its
+     final github.io location. -->
+<meta name="description" content="Live dashboards from the Tahoe Regional Planning Agency tracking development in the Tahoe Basin against the Regional Plan caps - how much has been built and what's still available.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lake Tahoe Regional Plan - Tracking Development in the Tahoe Basin">
+<meta property="og:description" content="How much has been built, what's left to build, and how Tahoe Basin development has changed over time.">
+<meta property="og:url" content="https://www.trpa.gov/development-rights/">
+<meta property="og:image" content="https://trpa-agency.github.io/Reporting/html/assets/tahoe-housing-hero.jpg">
+<meta property="og:site_name" content="Tahoe Regional Planning Agency">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lake Tahoe Regional Plan - Tracking Development in the Tahoe Basin">
+<meta name="twitter:description" content="How much has been built, what's left to build, and how Tahoe Basin development has changed over time.">
+<meta name="twitter:image" content="https://trpa-agency.github.io/Reporting/html/assets/tahoe-housing-hero.jpg">
+
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  /* TRPA brand palette (PMS 285C primary) */
+  --trpa-blue:    #0072CE;
+  --trpa-navy:    #003B71;
+  --trpa-earth:   #B47E00;
+  --trpa-forest:  #4A6118;
+  --trpa-brick:   #9C3E27;
+  --trpa-orange:  #E87722;
+  --trpa-purple:  #7B6A8A;
+  --trpa-ice:     #B4CBE8;
+
+  /* Functional neutrals */
+  --bg:          #f5f7fa;
+  --surface:     #ffffff;
+  --border:      #e1e7ee;
+  --text-dark:   #003B71;
+  --text-mid:    #5d6c7e;
+  --text-light:  #8a9bb2;
+  --shadow:      0 2px 16px rgba(0, 59, 113, 0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--bg); }
+body {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.55;
+}
+a { color: var(--trpa-blue); }
+
+/* Compact public-facing header. Deliberately shorter than the internal
+   index.html header so it sits inside a trpa.gov iframe without dominating
+   the host page's own header. Single navy band, logo + title block, no
+   accent stripe (calmer treatment for the public-facing surface). */
+header {
+  background: var(--trpa-navy);
+  color: #fff;
+  display: flex;
+  align-items: stretch;
+}
+.header-content {
+  padding: 16px 32px 18px;
+  flex: 1;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.header-logo {
+  flex-shrink: 0;
+  display: inline-block;
+  text-decoration: none;
+}
+.header-logo img {
+  height: 58px;
+  width: auto;
+  display: block;
+}
+.header-text { flex: 1; min-width: 0; }
+header h1 {
+  font-weight: 700;
+  font-size: 1.55rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+header h1 span {
+  /* Title phrase ("Regional Plan"); kept white to match the rest of the
+     title for a calmer all-white treatment on the navy band. */
+  color: #fff;
+}
+.subtitle {
+  font-size: 0.86rem;
+  color: var(--trpa-ice);
+  margin-top: 4px;
+  opacity: 0.95;
+  max-width: 760px;
+}
+
+/* Hero strip: intro text on the left, Tahoe affordable-housing photo on
+   the right. Two-column grid at desktop, stacks on tablet/mobile. The
+   photo sits as a real <img> (not a background) so it's semantic +
+   accessible and the alt text describes what's shown. */
+.hero {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.hero-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 30px 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: center;
+}
+/* Intro paragraphs: plain body-text treatment so the four-paragraph
+   regional plan background reads as a calm intro, not a heavy hero. */
+.hero-intro {
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  line-height: 1.65;
+  font-weight: 400;
+}
+.hero-intro + .hero-intro {
+  margin-top: 0.8em;
+}
+.hero-image {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 59, 113, 0.15);
+  aspect-ratio: 3 / 2;
+  max-height: 380px;
+  background: var(--bg);   /* subtle placeholder color if the image fails to load */
+}
+.hero-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+@media (max-width: 900px) {
+  .hero-inner { grid-template-columns: 1fr; gap: 22px; }
+  .hero-image { max-height: 220px; aspect-ratio: 16 / 9; }
+}
+
+/* Page sections */
+.section {
+  padding: 28px 32px 16px;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Question cards: plain-language entry points to each dashboard. No
+   audience tags, no Option A/B/C selectors - public-facing should not
+   surface internal variant complexity. Each card links directly to the
+   canonical Option A.
+
+   Grid sizing is explicit (not auto-fit) for predictable behavior in an
+   embed where we can't control the iframe width. 4 dashboards = 4 columns
+   at desktop, 2x2 at tablet, single column on phones. */
+.qcards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+@media (max-width: 1100px) {
+  .qcards { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .qcards { grid-template-columns: 1fr; }
+}
+.qcard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 22px 26px 24px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  height: 100%;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+.qcard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 24px rgba(0, 59, 113, 0.12);
+}
+.qcard::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--accent, var(--trpa-blue));
+}
+/* Visual variety across cards without internal audience semantics. */
+.qcard:nth-child(1) { --accent: var(--trpa-navy);   }
+.qcard:nth-child(2) { --accent: var(--trpa-earth);  }
+.qcard:nth-child(3) { --accent: var(--trpa-forest); }
+.qcard:nth-child(4) { --accent: var(--trpa-orange); }
+
+.qcard-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+.qcard-question {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-mid);
+  line-height: 1.4;
+  font-style: italic;
+  margin-top: -2px;
+}
+.qcard-desc {
+  font-size: 0.83rem;
+  color: var(--text-light);
+  line-height: 1.55;
+}
+.qcard-cta {
+  margin-top: auto;
+  padding-top: 12px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--accent, var(--trpa-blue));
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.qcard-cta::after {
+  content: "\2192"; /* right arrow */
+  transition: transform 0.12s;
+}
+.qcard:hover .qcard-cta::after {
+  transform: translateX(3px);
+}
+
+/* About-this-data strip: short context block below the cards. Replaces
+   the internal page's "reference.html" pointer (which links to
+   architecture docs the public doesn't need). */
+.about-strip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-top: 28px;
+  font-size: 0.86rem;
+  color: var(--text-mid);
+  line-height: 1.6;
+}
+.about-strip strong { color: var(--text-dark); }
+.about-strip h3 {
+  font-size: 0.95rem;
+  color: var(--trpa-navy);
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.about-strip a { color: var(--trpa-blue); text-decoration: none; }
+.about-strip a:hover { text-decoration: underline; }
+
+footer {
+  padding: 18px 32px 26px;
+  font-size: 0.74rem;
+  color: var(--text-light);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: 28px;
+  text-align: center;
+}
+footer a { color: var(--trpa-blue); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+@media (max-width: 600px) {
+  header h1 { font-size: 1.25rem; }
+  .header-content, .section, .hero-inner { padding-left: 18px; padding-right: 18px; }
+  .header-content { gap: 14px; }
+  .header-logo img { height: 46px; }
+  .subtitle { font-size: 0.78rem; }
+  .hero-intro { font-size: 0.98rem; }
+  .hero-lead { font-size: 0.9rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- Compact navy header. Drop the entire <header> block if trpa.gov's
+     host page already provides a title and you want the iframe to be
+     header-less. -->
+<header>
+  <div class="header-content">
+    <a class="header-logo" href="https://www.trpa.gov/" aria-label="Tahoe Regional Planning Agency">
+      <img src="assets/trpa-logo-color.png" alt="TRPA" />
+    </a>
+    <div class="header-text">
+      <h1>Lake Tahoe <span>Regional Plan</span></h1>
+      <div class="subtitle">Development Tracking</div>
+    </div>
+  </div>
+</header>
+
+<!-- Hero strip: intro text on the left, Tahoe housing photo on the right.
+     Photo path is assets/tahoe-housing-hero.jpg - swap the file there to
+     change the imagery without touching the markup. -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <p class="hero-intro">
+        Lake Tahoe has long been a global leader in harmonizing the natural
+        and human-made environments. The Tahoe Regional Planning Agency
+        implements a unique and comprehensive approach to managing new
+        development and redevelopment as outlined in the Lake Tahoe
+        Regional Plan.
+      </p>
+      <p class="hero-intro">
+        Adopted in 1987 and updated in 2012, the Regional Plan limits growth
+        while strategically allowing development that meets environmental
+        standards. Today, 90 percent of the Tahoe Basin is public land,
+        which further reduces development potential and preserves sensitive
+        lands.
+      </p>
+      <p class="hero-intro">
+        Together TRPA's conservation programs and growth management system
+        advance the region's environmental threshold goals and support
+        community resilience.
+      </p>
+      <p class="hero-intro">
+        Explore the dashboards below to see how much has been built, what
+        still has development potential, and how Tahoe Basin development
+        has changed over time.
+      </p>
+    </div>
+    <div class="hero-image">
+      <img src="assets/tahoe-housing-hero.jpg" alt="Aerial view of a multi-family affordable housing development in the Tahoe Basin, surrounded by pine forest." />
+    </div>
+  </div>
+</div>
+
+<div class="section">
+
+  <div class="qcards">
+
+    <a class="qcard" href="tahoe-development-tracker.html">
+      <div class="qcard-title">Tahoe Development Snapshot</div>
+      <div class="qcard-question">How much has been built? How much more can be built?</div>
+      <div class="qcard-desc">
+        Existing residential, commercial, and tourist development across the basin,
+        alongside what's banked and what's still available under the Regional Plan.
+      </div>
+      <div class="qcard-cta">Open dashboard</div>
+    </a>
+
+    <a class="qcard" href="development_history.html">
+      <div class="qcard-title">Development Since the 2012 Regional Plan</div>
+      <div class="qcard-question">How has development changed over time?</div>
+      <div class="qcard-desc">
+        Year-over-year change in residential, commercial, and tourist development
+        across the Tahoe Region. Scope the basin or filter to a single county or city.
+      </div>
+      <div class="qcard-cta">Open dashboard</div>
+    </a>
+
+    <a class="qcard" href="residential-additions-by-source.html">
+      <div class="qcard-title">Residential Additions by Source</div>
+      <div class="qcard-question">Where do residential units come from each year?</div>
+      <div class="qcard-desc">
+        Annual completed residential units broken down by the type of development
+        right used: allocations, bonus units, transfers, conversions, or
+        previously-banked rights.
+      </div>
+      <div class="qcard-cta">Open dashboard</div>
+    </a>
+
+    <a class="qcard" href="allocation-tracking.html">
+      <div class="qcard-title">Allocation Tracking &amp; Pool Balances</div>
+      <div class="qcard-question">What's been allocated?, and what's left in each pool?</div>
+      <div class="qcard-desc">
+        Two views: <strong>basin overview by commodity</strong> (total authorized vs allocated /
+        jurisdiction pool / TRPA pool / unreleased) and <strong>pool balances by jurisdiction</strong>
+        (per-pool used vs available, with year-by-year metering on residential).
+      </div>
+      <div class="qcard-cta">Open dashboard</div>
+    </a>
+
+  </div>
+
+  <!-- Plain-language context block. Replaces the internal index.html's
+       "go to reference.html" banner (which points at the data architecture
+       reference - not useful to the public). -->
+  <div class="about-strip">
+    <h3>About this data</h3>
+    <p>
+      The Tahoe Regional Plan caps the cumulative total of development that
+      can occur in the basin. These dashboards show the live tally maintained by the
+      <strong>Tahoe Regional Planning Agency</strong>.
+    </p>
+    <p style="margin-top: 8px;">
+      For more on the program, see
+      <a href="https://www.trpa.gov/development-rights/">TRPA Development Rights</a>
+      or the
+      <a href="https://parcels.laketahoeinfo.org/DevelopmentRightPool/DevelopmentRightPoolBalanceReport">Pool Balance Report</a>
+      on Lake Tahoe Info.
+    </p>
+    <p style="margin-top: 10px; font-size: 0.78rem; color: var(--text-light); font-style: italic;" id="data-as-of">
+      Checking data freshness&hellip;
+    </p>
+  </div>
+
+</div>
+
+<footer>
+  &copy; 2026 Tahoe Regional Planning Agency
+  &middot;
+  <a href="https://www.trpa.gov/">trpa.gov</a>
+  &middot;
+  <a href="mailto:info@trpa.gov?subject=Dashboard%20feedback">Feedback</a>
+</footer>
+
+<script>
+// "Data current as of YEAR" - one-shot fetch against the Parcel Development
+// History layer (Cumulative_Accounting layer 0). MAX(YEAR) on that layer
+// is the agency's canonical "as of" year for on-the-ground development
+// totals; same source-of-truth used by the Tracker hero strip. Silently
+// no-ops if the REST endpoint is unreachable (CORS, offline, etc.) so the
+// page never shows a broken-looking error to public visitors.
+(async function () {
+  const el = document.querySelector('#data-as-of');
+  if (!el) return;
+  const PDH_MAX_YEAR_URL =
+    'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/0/query'
+    + '?where=1%3D1'
+    + '&outStatistics=' + encodeURIComponent('[{"statisticType":"max","onStatisticField":"YEAR","outStatisticFieldName":"MaxYear"}]')
+    + '&returnGeometry=false&f=json';
+  try {
+    const r = await fetch(PDH_MAX_YEAR_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const js = await r.json();
+    const maxYear = js && js.features && js.features[0] && js.features[0].attributes
+      ? (js.features[0].attributes.MaxYear || js.features[0].attributes.maxYear)
+      : null;
+    if (maxYear) {
+      el.textContent = 'Data current as of ' + maxYear + '.';
+    } else {
+      el.style.display = 'none';
+    }
+  } catch (e) {
+    // Quiet failure: hide the line rather than showing an error to public visitors.
+    el.style.display = 'none';
+  }
+})();
+</script>
+
+</body>
+</html>
