@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Development Since the 2012 Regional Plan - TRPA</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root {
+  --trpa-blue:   #0072CE;
+  --trpa-navy:   #003B71;
+  --trpa-earth:  #B47E00;
+  --trpa-forest: #4A6118;
+  --trpa-brick:  #9C3E27;
+  --trpa-olive:  #B5A64C;
+  --trpa-orange: #E87722;
+  --trpa-purple: #7B6A8A;
+  --trpa-ice:    #B4CBE8;
+  --bg:          #f5f7fa;
+  --surface:     #ffffff;
+  --border:      #e1e7ee;
+  --text-dark:   #003B71;
+  --text-mid:    #5d6c7e;
+  --text-light:  #8a9bb2;
+  --shadow:      0 2px 16px rgba(0, 59, 113, 0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text-dark); min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header (matches index.html style) */
+header { background: var(--trpa-navy); color: #fff; display: flex; align-items: stretch; }
+.header-content {
+  padding: 16px 32px 18px; flex: 1;
+  max-width: 1280px; margin: 0 auto; width: 100%;
+  display: flex; align-items: center; gap: 22px;
+}
+.header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
+.header-logo img { height: 58px; width: auto; display: block; }
+.header-text { flex: 1; min-width: 0; }
+.header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
+header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
+@media (max-width: 600px) {
+  .header-content { padding-left: 18px; padding-right: 18px; gap: 14px; }
+  .header-logo img { height: 46px; }
+  header h1 { font-size: 1.25rem; }
+}
+
+/* "What does this dashboard show?" hover popover on the page title. */
+.title-info { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 12px; }
+.title-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.85rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+}
+.title-info-icon:hover { background: #fff; color: var(--trpa-navy); }
+.title-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -4px;
+  width: 440px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 0.86rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.title-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.title-info-popover p { margin-bottom: 8px; }
+.title-info-popover p:last-child { margin-bottom: 0; }
+.title-info:hover .title-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+.title-info::after {
+  content: ''; position: absolute;
+  top: calc(100% + 4px); left: 4px;
+  border: 6px solid transparent; border-bottom-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  z-index: 101;
+}
+.title-info:hover::after { opacity: 1; }
+
+/* Inline "?" affordance for ctrl-bar labels (e.g., Jurisdictions ?  for the
+   Carson County context). 14px ice circle on a light background. */
+.ctrl-info { position: relative; display: inline-flex; align-items: center; margin-left: 5px; vertical-align: middle; }
+.ctrl-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.6rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+  letter-spacing: 0; text-transform: none;
+}
+.ctrl-info-icon:hover { background: var(--trpa-blue); color: #fff; }
+.ctrl-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -8px;
+  width: 340px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 20px rgba(0, 59, 113, 0.15);
+  font-size: 0.8rem; line-height: 1.5; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.ctrl-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.ctrl-info:hover .ctrl-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+.ctrl-info::after {
+  content: ''; position: absolute;
+  top: calc(100% + 4px); left: 0;
+  border: 6px solid transparent; border-bottom-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  z-index: 101;
+}
+.ctrl-info:hover::after { opacity: 1; }
+
+.header-sub { font-size: 0.86rem; color: var(--trpa-ice); margin-top: 4px; opacity: 0.95; max-width: 760px; }
+.header-meta { flex-shrink: 0; font-size: 0.75rem; color: var(--trpa-ice); text-align: right; line-height: 1.7; opacity: 0.85; white-space: nowrap; }
+.live-badge { display: inline-block; background: var(--trpa-forest); color: #fff; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; }
+.asof-badge { display: inline-block; background: var(--trpa-ice); color: var(--trpa-navy); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; margin-top: 4px; }
+
+/* Filter bar (jurisdiction pills only; year slider was removed) */
+.ctrl-bar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 40px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center;
+}
+.ctrl-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); }
+
+.juris-pills { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.juris-pill {
+  padding: 4px 12px; border: 1.5px solid var(--border); border-radius: 16px;
+  background: #fff; font-family: inherit; font-size: 0.76rem; color: var(--text-mid);
+  cursor: pointer; font-weight: 600;
+}
+.juris-pill:hover { border-color: var(--trpa-blue); color: var(--trpa-blue); }
+.juris-pill.active { background: var(--trpa-navy); border-color: var(--trpa-navy); color: #fff; }
+
+/* Sections + cards */
+.section { padding: 24px 40px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; box-shadow: var(--shadow); }
+.card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+.card p { font-size: 0.73rem; color: var(--text-light); margin-bottom: 14px; }
+
+.footnote {
+  padding: 18px 40px 26px; font-size: 0.74rem; color: var(--text-light);
+  line-height: 1.6; background: var(--surface); border-top: 1px solid var(--border);
+}
+.footnote a { color: var(--trpa-blue); text-decoration: none; }
+.footnote a:hover { text-decoration: underline; }
+.footnote strong { color: var(--text-mid); font-weight: 600; }
+.footnote code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
+/* "Related views" cross-link strip; sits between main content + footnote */
+.related-dashboards {
+  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
+  font-size: 0.82rem; color: var(--text-mid);
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+}
+.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
+.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
+.related-dashboards a:hover { text-decoration: underline; }
+
+@media (max-width: 900px) {
+  header .header-content, .ctrl-bar, .section, .footnote { padding-left: 18px; padding-right: 18px; }
+}
+
+/* Loading overlay - same pattern across the dashboard set */
+#loading-overlay { position: fixed; inset: 0; background: rgba(0, 59, 113, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.loading-card { background: #fff; border-radius: 10px; padding: 36px 48px; text-align: center; min-width: 260px; }
+.loading-card h3 { font-size: 1rem; color: var(--trpa-navy); margin-bottom: 20px; }
+.lb-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+#loading-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--trpa-blue), var(--trpa-forest)); border-radius: 2px; transition: width 0.3s; }
+
+/* Public-facing agency footer (added 2026-05-18 per FOOTER_PATTERN.md).
+   Copyright + trpa.gov + feedback row at the bottom of every dashboard. */
+footer {
+  padding: 18px 32px 26px;
+  font-size: 0.74rem; color: var(--text-light);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: 0;
+  text-align: center;
+}
+footer a { color: var(--trpa-blue); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-card">
+    <h3>Loading development history&hellip;</h3>
+    <div class="lb-bg"><div id="loading-bar"></div></div>
+  </div>
+</div>
+
+<header>
+  <div class="header-content">
+    <a class="header-logo" href="https://www.trpa.gov/" aria-label="Tahoe Regional Planning Agency">
+      <img src="assets/trpa-logo-color.png" alt="TRPA" />
+    </a>
+    <div class="header-text">
+      <h1>Development Since the 2012 Regional Plan<span class="title-info" aria-label="What does this dashboard show?">
+        <span class="title-info-icon">?</span>
+        <div class="title-info-popover">
+          <strong>Year-over-year and cumulative trends in basin development.</strong>
+          <p>The <strong>top chart</strong> is the cumulative trajectory over time - the running on-the-ground total for residential, commercial, and tourist development.</p>
+          <p>The <strong>bottom chart</strong> is year-over-year change - how much was added (or removed) each year, per commodity. Negative bars (in brick) are net removals.</p>
+          <p>Use the jurisdiction pills below to scope the basin to a single county or city.</p>
+        </div>
+      </span></h1>
+      <div class="header-sub">
+        Year-over-year change in residential, commercial, and tourist development across the Tahoe Region. Live from the Parcel Development History layer.
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge">Live Data</div>
+      <div class="asof-badge">As of 2025</div>
+    </div>
+  </div>
+</header>
+
+<!-- Filter bar: jurisdiction pills only. The year slider was removed since
+     its only role was to set the "as of" year for the KPI cards (which are
+     also removed); both charts always show the full 2012-2025 trajectory
+     regardless. -->
+<div class="ctrl-bar" id="shared-filter-bar">
+  <span class="ctrl-label">Jurisdictions<span class="ctrl-info" aria-label="Why isn't Carson City a pill?">
+    <span class="ctrl-info-icon">?</span>
+    <div class="ctrl-info-popover">
+      <strong>Carson City is included in the "All" total but doesn't have its own pill.</strong>
+      Carson does not receive Tahoe Regional Plan allocations and shows constant 4 residential units / 0 CFA / 0 TAU throughout the period - it would be a flatline pill. Including it in "All" keeps the basin total aligned with the Tahoe Development Snapshot headline.
+    </div>
+  </span></span>
+  <div class="juris-pills" id="juris-pills"></div>
+</div>
+
+<!-- Cumulative chart sits ABOVE year-over-year per Mason's 2026-05-18 ask:
+     the trajectory is the easier read; the per-year deltas drill into it
+     below. -->
+<div class="section">
+  <div class="card">
+    <h3>Cumulative total over time</h3>
+    <p>On-the-ground totals through each Year.</p>
+    <div id="total-chart" style="height:340px;"></div>
+  </div>
+</div>
+
+<div class="section" style="padding-top:0;">
+  <div class="card">
+    <h3>Year-over-year change, per commodity</h3>
+    <p>Net change each year.</p>
+    <div id="delta-chart" style="height:340px;"></div>
+  </div>
+</div>
+
+<div class="related-dashboards">
+  <strong>Related views:</strong>
+  <a href="residential-additions-by-source.html">&harr; Residential Additions by Source (where each year's units came from)</a>
+  <a href="tahoe-development-tracker.html">&larr; Tahoe Development Snapshot (executive overview)</a>
+  <a href="index.html">All dashboards</a>
+</div>
+
+<div class="footnote">
+  <strong>Source:</strong> Tahoe Regional Planning Agency. Residential, commercial, and tourist development summed by year and jurisdiction across the 2012-2025 window.
+  <br>Year-over-year change can be negative when banked or converted units exceed new construction.</div>
+
+<script>
+const TRPA = {
+  blue:'#0072CE', navy:'#003B71', earth:'#B47E00', forest:'#4A6118',
+  brick:'#9C3E27', olive:'#B5A64C', orange:'#E87722', purple:'#7B6A8A',
+  ice:'#B4CBE8',
+};
+const plotFont  = { family: '"Open Sans", system-ui, sans-serif', color: TRPA.navy, size: 12 };
+const HOVERLABEL = { bgcolor: '#ffffff', bordercolor: TRPA.ice, font: { color: TRPA.navy, family: '"Open Sans"', size: 12 } };
+
+// Live REST: groupBy YEAR + JURISDICTION; sum the 3 commodity fields.
+const PDH_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/0/query'
+  + '?where=' + encodeURIComponent('YEAR>=2012')
+  + '&outStatistics=' + encodeURIComponent(JSON.stringify([
+      { statisticType: 'sum', onStatisticField: 'Residential_Units',          outStatisticFieldName: 'res' },
+      { statisticType: 'sum', onStatisticField: 'CommercialFloorArea_SqFt',   outStatisticFieldName: 'cfa' },
+      { statisticType: 'sum', onStatisticField: 'TouristAccommodation_Units', outStatisticFieldName: 'tau' },
+    ]))
+  + '&groupByFieldsForStatistics=YEAR%2CJURISDICTION'
+  + '&returnGeometry=false&f=json';
+
+// PDH uses short jurisdiction codes; map to display names matching
+// allocation-tracking's labels.
+const JURIS_LABEL = {
+  'DG':   'Douglas County',
+  'EL':   'El Dorado County',
+  'PL':   'Placer County',
+  'CSLT': 'City of South Lake Tahoe',
+  'WA':   'Washoe County',
+  'CC':   'Carson City',
+};
+// JURIS_ORDER drives the pill UI (Carson omitted - no pill since Carson
+// doesn't receive Tahoe Regional Plan allocations and shows constant 4
+// residential units). JURIS_BASIN includes Carson so the "All" total
+// matches tahoe-development-tracker.html (49,018 RES at 2025).
+const JURIS_ORDER = ['DG', 'EL', 'PL', 'CSLT', 'WA'];
+const JURIS_BASIN = ['DG', 'EL', 'PL', 'CSLT', 'WA', 'CC'];
+const JURIS_SHORT = {
+  'DG':   'Douglas',
+  'EL':   'El Dorado',
+  'PL':   'Placer',
+  'CSLT': 'S. Lake Tahoe',
+  'WA':   'Washoe',
+};
+
+// State - the full feature set, cached once on load; filter ops compute from it.
+// activePills defaults to the full basin (incl. Carson) so the "All"
+// view matches the Tracker headline. Toggling a single pill scopes to
+// just that jurisdiction (Carson drops out implicitly since it has no
+// pill to toggle to).
+let rawFeatures = [];   // [{YEAR, JURISDICTION, res, cfa, tau}, ...]
+let activePills = new Set(JURIS_BASIN);
+const YEARS = [2012,2013,2014,2015,2016,2017,2018,2019,2020,2021,2022,2023,2024,2025];
+
+// ─────────────────────────────────────────
+// FETCH + AGGREGATE
+// ─────────────────────────────────────────
+async function loadData() {
+  const r = await fetch(PDH_URL, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('PDH HTTP ' + r.status);
+  const j = await r.json();
+  // Load all basin jurisdictions including Carson (CC). Carson has no
+  // pill in the UI but is included in activePills so the "All" total
+  // matches the Tracker headline (49,018 RES at 2025).
+  rawFeatures = (j.features || [])
+    .map(f => f.attributes || {})
+    .filter(a => a.JURISDICTION && JURIS_BASIN.includes(a.JURISDICTION));
+}
+
+// Sum rows that match the active jurisdiction filter, grouped by YEAR.
+function totalsByYear() {
+  const out = Object.fromEntries(YEARS.map(y => [y, { res: 0, cfa: 0, tau: 0 }]));
+  for (const a of rawFeatures) {
+    if (!activePills.has(a.JURISDICTION)) continue;
+    if (!(a.YEAR in out)) continue;
+    out[a.YEAR].res += Number(a.res) || 0;
+    out[a.YEAR].cfa += Number(a.cfa) || 0;
+    out[a.YEAR].tau += Number(a.tau) || 0;
+  }
+  return out;
+}
+
+// Deltas per year: change relative to prior year. The first year has no prior, so 0.
+function deltasByYear(totals) {
+  const out = {};
+  for (let i = 0; i < YEARS.length; i++) {
+    const y = YEARS[i];
+    if (i === 0) { out[y] = { res: 0, cfa: 0, tau: 0 }; continue; }
+    const prev = YEARS[i - 1];
+    out[y] = {
+      res: totals[y].res - totals[prev].res,
+      cfa: totals[y].cfa - totals[prev].cfa,
+      tau: totals[y].tau - totals[prev].tau,
+    };
+  }
+  return out;
+}
+
+const fmt = (n) => {
+  if (n == null) return '0';
+  const a = Math.round(n);
+  return a.toLocaleString();
+};
+// fmtCompact removed 2026-05-18 - it was only used by the KPI cards above
+// the charts (also removed). Both charts use comma-formatted full numbers
+// in their hover templates.
+const fmtSigned = (n) => {
+  const a = Math.round(n);
+  if (a > 0)  return '+' + a.toLocaleString();
+  if (a === 0) return '0';
+  return a.toLocaleString();   // negative sign baked in
+};
+
+// "Nice" tick step based on magnitude. Mirrors Plotly's auto-pick logic
+// (1 / 2 / 5 × 10^n) so axis labels read as round numbers. Used by both
+// the YoY (delta) and cumulative (total) charts to extend the y-range
+// one full step past the data peak so the topmost tick label always
+// sits clear of the data.
+const niceStep = (v) => {
+  const abs = Math.abs(v);
+  if (abs === 0) return 1;
+  const exp = Math.pow(10, Math.floor(Math.log10(abs)));
+  const norm = abs / exp;
+  if (norm < 1.5) return 0.2 * exp;
+  if (norm < 3)   return 0.5 * exp;
+  if (norm < 7)   return 1.0 * exp;
+  return 2.0 * exp;
+};
+
+// ─────────────────────────────────────────
+// PILLS - jurisdictions
+// ─────────────────────────────────────────
+function buildPills() {
+  const container = document.querySelector('#juris-pills');
+  container.innerHTML =
+    '<button class="juris-pill active" id="pill-all" onclick="toggleAllPills()">All</button>' +
+    JURIS_ORDER.map(code =>
+      `<button class="juris-pill active" data-juris="${code}" onclick="togglePill(this)">${JURIS_SHORT[code]}</button>`
+    ).join('');
+}
+function syncAllPill() {
+  const all = document.querySelector('#pill-all');
+  if (!all) return;
+  const pills = [...document.querySelectorAll('.juris-pill[data-juris]')];
+  all.classList.toggle('active', pills.length > 0 && pills.every(p => activePills.has(p.dataset.juris)));
+}
+function toggleAllPills() {
+  // Activate all UI pills + Carson (which has no pill). All = full basin.
+  document.querySelectorAll('.juris-pill[data-juris]').forEach(p => {
+    p.classList.add('active');
+  });
+  activePills = new Set(JURIS_BASIN);
+  document.querySelector('#pill-all').classList.add('active');
+  renderAll();
+}
+// Click on a single pill - filter to ONLY that jurisdiction. If it's already
+// the sole active pill, restore "All" so a stuck filter is easy to clear.
+function togglePill(btn) {
+  const j = btn.dataset.juris;
+  if (activePills.size === 1 && activePills.has(j)) { toggleAllPills(); return; }
+  activePills.clear();
+  activePills.add(j);
+  document.querySelectorAll('.juris-pill[data-juris]').forEach(p =>
+    p.classList.toggle('active', p.dataset.juris === j));
+  syncAllPill();
+  renderAll();
+}
+
+// ─────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────
+// (setSliderYear + renderKPIs removed 2026-05-18 along with the year
+// slider and the 3 KPI cards above the charts. Both charts always show
+// the full 2012-2025 trajectory; the jurisdiction pills are the only
+// filter left.)
+
+// Facet chart: 3 panels, one per commodity, year-over-year delta as bars.
+// Independent y-axes so the small TAU series stays legible.
+function renderDeltaChart() {
+  const tot = totalsByYear();
+  const del = deltasByYear(tot);
+  const panels = [
+    { key: 'res', label: 'Residential', unit: 'units', color: TRPA.forest },
+    { key: 'cfa', label: 'Commercial',  unit: 'sq ft', color: TRPA.earth  },
+    { key: 'tau', label: 'Tourist',     unit: 'units', color: TRPA.purple },
+  ];
+  const traces = [];
+  const annotations = [];
+  const axes = {};
+  const gap = 0.10;
+  const cellW = (1 - 2 * gap) / 3;
+
+  panels.forEach((p, i) => {
+    const xref = i === 0 ? 'x' : 'x' + (i + 1);
+    const yref = i === 0 ? 'y' : 'y' + (i + 1);
+    // Years 2013+ have a real delta (2012 is baseline = 0).
+    const xData = YEARS.slice(1);
+    const yData = xData.map(y => del[y][p.key]);
+    const sumDelta = yData.reduce((a, b) => a + b, 0);
+    // Per-panel asymmetric range so a series that never goes negative (e.g.
+    // residential YoY change is always positive) doesn't waste vertical
+    // space on a negative half-axis it never uses. Range is extended to
+    // one full tick interval ABOVE yMax (and below yMin when negatives
+    // exist) so the topmost tick label always sits clear of the highest
+    // bar - the data peak never coincides with the top label.
+    const yMin = Math.min(0, ...yData);
+    const yMax = Math.max(0, ...yData);
+    const step = niceStep(Math.max(yMax, -yMin));
+    // Round each end OUT to the nearest step boundary, then add one more
+    // step so a tick label always exists past the data peak (top + bottom
+    // when negatives exist).
+    const yHi = yMax > 0 ? Math.ceil(yMax / step) * step + step : 0;
+    const yLo = yMin < 0 ? Math.floor(yMin / step) * step - step : 0;
+
+    traces.push({
+      name: p.label, type: 'bar',
+      x: xData, y: yData,
+      xaxis: xref, yaxis: yref,
+      marker: { color: yData.map(v => v < 0 ? TRPA.brick : p.color) },
+      showlegend: false,
+      // <extra></extra> empties Plotly's trace-name tag, so only the
+      // signed value + unit shows in the tooltip. Commodity is already
+      // identified by the panel title above each facet - no need to repeat.
+      hovertemplate: '<b>%{y:+,}</b> ' + p.unit + '<extra></extra>',
+    });
+    const x0 = i * (cellW + gap);
+    const x1 = x0 + cellW;
+    // Title centered above each panel, in paper coords so it lives in the
+    // top margin (margin.t below) and never overlaps the bars.
+    annotations.push({
+      xref: 'paper', yref: 'paper',
+      x: (x0 + x1) / 2, y: 1.0,
+      xanchor: 'center', yanchor: 'bottom',
+      text: '<b>' + p.label + '</b>  <span style="color:#8a9bb2;font-size:10px">· '
+        + fmtSigned(sumDelta) + ' ' + p.unit + ' net 2012-2025</span>',
+      showarrow: false,
+      font: { color: p.color, size: 12, family: '"Open Sans"' },
+    });
+    axes['xaxis' + (i === 0 ? '' : (i + 1))] = {
+      domain: [x0, x1], anchor: 'y' + (i === 0 ? '' : (i + 1)),
+      tickmode: 'linear', dtick: 2,
+      gridcolor: '#eef1f6', linecolor: TRPA.ice, tickfont: { size: 9, color: TRPA.navy },
+    };
+    axes['yaxis' + (i === 0 ? '' : (i + 1))] = {
+      domain: [0, 1], anchor: 'x' + (i === 0 ? '' : (i + 1)),
+      range: [yLo, yHi],
+      dtick: step,   // explicit tick step so the topmost label = yHi, guaranteed above the data peak
+      gridcolor: '#eef1f6', linecolor: TRPA.ice, tickfont: { size: 9, color: TRPA.navy },
+      zeroline: true, zerolinecolor: '#d8dde6', zerolinewidth: 1.5,
+    };
+  });
+
+  Plotly.newPlot('delta-chart', traces, Object.assign({
+    font: plotFont,
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { t: 36, r: 16, b: 36, l: 50 },  // t=36 reserves space for the title strip
+    hovermode: 'x unified',
+    hoverlabel: HOVERLABEL,
+    annotations,
+  }, axes), { responsive: true, displayModeBar: false });
+}
+
+// Cumulative total over time: 3 panels (Res / CFA / TAU), independent y axes,
+// area charts. Reads as 'on-the-ground totals each YEAR'.
+function renderTotalChart() {
+  const tot = totalsByYear();
+  const panels = [
+    { key: 'res', label: 'Residential', unit: 'units', color: TRPA.forest },
+    { key: 'cfa', label: 'Commercial',  unit: 'sq ft', color: TRPA.earth  },
+    { key: 'tau', label: 'Tourist',     unit: 'units', color: TRPA.purple },
+  ];
+  const traces = [];
+  const annotations = [];
+  const axes = {};
+  const gap = 0.10;
+  const cellW = (1 - 2 * gap) / 3;
+
+  panels.forEach((p, i) => {
+    const xref = i === 0 ? 'x' : 'x' + (i + 1);
+    const yref = i === 0 ? 'y' : 'y' + (i + 1);
+    const yData = YEARS.map(y => tot[y][p.key]);
+
+    // Pre-compute year-over-year % change strings per data point. Plotly's
+    // hovertemplate has no built-in "prior point" reference, so we pack the
+    // formatted YoY string into customdata and pull it into the hover via
+    // %{customdata}. First year has no prior, so "baseline year" instead.
+    const yoyText = YEARS.map((y, idx) => {
+      if (idx === 0) return 'baseline year';
+      const prev = yData[idx - 1];
+      const cur  = yData[idx];
+      if (!prev) return '';
+      const pct  = ((cur - prev) / prev) * 100;
+      const sign = pct > 0 ? '+' : '';
+      return sign + pct.toFixed(2) + '% from ' + YEARS[idx - 1];
+    });
+
+    // Filled area chart. Fill to y=0 - because the y-axis range is well
+    // above zero (we zoom into the data window), the visual effect is that
+    // the fill covers the entire panel below the line, making the trajectory
+    // pop. Hover shows absolute value + YoY change.
+    traces.push({
+      name: p.label, type: 'scatter', mode: 'lines',
+      x: YEARS, y: yData,
+      xaxis: xref, yaxis: yref,
+      line: { color: p.color, width: 2 },
+      fill: 'tozeroy',
+      fillcolor: hexA(p.color, 0.22),
+      showlegend: false,
+      customdata: yoyText,
+      hovertemplate: '<b>%{y:,}</b> ' + p.unit + '<br>%{customdata}<extra></extra>',
+    });
+    const x0 = i * (cellW + gap);
+    const x1 = x0 + cellW;
+    // Title above each panel, in paper coords (margin.t reserves space).
+    // Subtitle = % change from first to last year of the window. Honest
+    // framing: shows that CFA is essentially flat (+0.03%) while Residential
+    // grew ~3% and Tourist declined ~3.8%. Number is signed (+/-) so
+    // direction reads at a glance.
+    const yMin = Math.min(...yData);
+    const yMax = Math.max(...yData);
+    const yStart = yData[0];
+    const yEnd = yData[yData.length - 1];
+    const pctChange = yStart !== 0 ? ((yEnd - yStart) / yStart) * 100 : 0;
+    const sign = pctChange > 0 ? '+' : '';   // negative already carries its own sign
+    const pctText = sign + pctChange.toFixed(1) + '% since ' + YEARS[0];
+    annotations.push({
+      xref: 'paper', yref: 'paper',
+      x: (x0 + x1) / 2, y: 1.0,
+      xanchor: 'center', yanchor: 'bottom',
+      text: '<b>' + p.label + '</b>  <span style="color:#8a9bb2;font-size:10px">· ' + pctText + '</span>',
+      showarrow: false,
+      font: { color: p.color, size: 12, family: '"Open Sans"' },
+    });
+    // X-axis: explicit range = [first year, last year] so the area fill
+    // spans the full panel width (no Plotly auto-padding on either side).
+    axes['xaxis' + (i === 0 ? '' : (i + 1))] = {
+      domain: [x0, x1], anchor: 'y' + (i === 0 ? '' : (i + 1)),
+      range: [YEARS[0], YEARS[YEARS.length - 1]],
+      tickmode: 'linear', dtick: 2,
+      gridcolor: '#eef1f6', linecolor: TRPA.ice, tickfont: { size: 9, color: TRPA.navy },
+    };
+    // Y-range: anchored at 0 with a "nice" top tick that sits one full
+    // tick interval ABOVE the data peak (same idiom as renderDeltaChart).
+    // Guarantees the topmost label always clears the cumulative line so
+    // viewers can read the panel's max without the data hitting the lid.
+    const cumStep = niceStep(yMax);
+    const cumHi = Math.ceil(yMax / cumStep) * cumStep + cumStep;
+    axes['yaxis' + (i === 0 ? '' : (i + 1))] = {
+      domain: [0, 1], anchor: 'x' + (i === 0 ? '' : (i + 1)),
+      range: [0, cumHi],
+      dtick: cumStep,   // explicit step so the topmost tick = cumHi (above the data peak)
+      gridcolor: '#eef1f6', linecolor: TRPA.ice, tickfont: { size: 9, color: TRPA.navy },
+    };
+  });
+
+  Plotly.newPlot('total-chart', traces, Object.assign({
+    font: plotFont,
+    paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+    margin: { t: 36, r: 16, b: 36, l: 60 },  // t=36 reserves space for the title strip
+    hovermode: 'x unified',
+    hoverlabel: HOVERLABEL,
+    annotations,
+  }, axes), { responsive: true, displayModeBar: false });
+}
+
+function renderAll() {
+  renderDeltaChart();
+  renderTotalChart();
+}
+
+// hex + alpha → rgba
+function hexA(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const bar = document.querySelector('#loading-bar');
+  if (bar) bar.style.width = '30%';
+  buildPills();
+  try {
+    await loadData();
+  } catch (e) {
+    console.error('Data unavailable:', e.message);
+    const overlayErr = document.querySelector('#loading-overlay');
+    if (overlayErr) overlayErr.style.display = 'none';
+    return;
+  }
+  renderAll();
+  if (bar) bar.style.width = '100%';
+  const overlay = document.querySelector('#loading-overlay');
+  if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 200);
+});
+</script>
+
+<footer>
+  &copy; 2026 Tahoe Regional Planning Agency &middot;
+  <a href="https://www.trpa.gov/">trpa.gov</a> &middot;
+  <a href="mailto:info@trpa.gov?subject=Dashboard%20feedback">Feedback</a>
+</footer>
+</body>
+</html>
