@@ -1103,8 +1103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const released = m.Released?.values || [];
     const assigned = m.Assigned?.values || [];
     Plotly.react('pbc-detail-chart', [
-      { name: 'Released to the pool', type: 'bar', x: years, y: released, marker: { color: TRPA.forest }, hovertemplate: '<b>%{y:,}</b> released<extra>%{x}</extra>' },
-      { name: 'Assigned to projects', type: 'scatter', mode: 'lines+markers', x: years, y: assigned, line: { color: TRPA.orange, width: 2.5 }, marker: { color: TRPA.orange, size: 5, line: { color: '#fff', width: 1 } }, hovertemplate: '<b>%{y:,}</b> assigned<extra>%{x}</extra>' },
+      { name: 'Released to the pool', type: 'bar', x: years, y: released, marker: { color: TRPA.forest }, hovertemplate: '<b>%{y:,}</b> released<extra></extra>' },
+      { name: 'Assigned to projects', type: 'scatter', mode: 'lines+markers', x: years, y: assigned, line: { color: TRPA.orange, width: 2.5 }, marker: { color: TRPA.orange, size: 5, line: { color: '#fff', width: 1 } }, hovertemplate: '<b>%{y:,}</b> assigned<extra></extra>' },
     ], {
       font: plotFont, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
       margin: { t: 8, r: 16, b: 36, l: 52 }, hoverlabel: HOVERLABEL,
