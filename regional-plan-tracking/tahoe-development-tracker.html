@@ -78,7 +78,7 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
 /* Per-section info popover: small "?" icon to the right of each section
    heading; hover reveals a 380px markdown explainer card. Uses the same
    pattern as the commodity tile-info / btn-info popovers elsewhere in the
-   dashboard set. Content lives in content/explainers/tahoe-development-snapshot/*.md. */
+   dashboard set. Content lives in assets/explainers/tahoe-development-snapshot/*.md. */
 .section-info {
   position: relative;
   display: inline-flex; align-items: center;
@@ -551,10 +551,10 @@ async function renderReservedNotConstructed() {
 // stays on "Loading explainer..." which is fine if the markdown can't
 // load). Same pattern used by allocation-tracking + pool-balance-cards.
 const SECTION_EXPLAINER_URLS = {
-  'info-existing': '../content/explainers/tahoe-development-snapshot/existing.md',
-  'info-banked':   '../content/explainers/tahoe-development-snapshot/banked.md',
-  'info-reserved': '../content/explainers/tahoe-development-snapshot/reserved.md',
-  'info-available':'../content/explainers/tahoe-development-snapshot/available.md',
+  'info-existing': 'assets/explainers/tahoe-development-snapshot/existing.md',
+  'info-banked':   'assets/explainers/tahoe-development-snapshot/banked.md',
+  'info-reserved': 'assets/explainers/tahoe-development-snapshot/reserved.md',
+  'info-available':'assets/explainers/tahoe-development-snapshot/available.md',
 };
 async function loadSectionExplainers() {
   await Promise.all(Object.entries(SECTION_EXPLAINER_URLS).map(async ([id, url]) => {
