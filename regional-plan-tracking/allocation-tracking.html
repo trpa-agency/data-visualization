@@ -138,7 +138,7 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
    cue, but the popover triggers on hover of the WHOLE tile (.donut-tile)
    so users don't have to pixel-hunt the icon. Formatting matches the
    .btn-info-popover pattern used on Tab 2 (Pool Balances) so the two
-   tabs feel like one dashboard. Content from content/explainers/pool-balance-cards/*.md
+   tabs feel like one dashboard. Content from assets/explainers/pool-balance-cards/*.md
    (shared with the Pool Balances tab - single source). */
 .tile-info {
   position: relative; display: inline-flex; vertical-align: middle;
@@ -681,10 +681,10 @@ async function fetchBalances() {
 // Keys match the local commodity keys (residential / rbu / commercial / tourist);
 // URLs point at the underlying file names (which use the longer SDE-style names).
 const EXPLAINER_URLS = {
-  residential: '../content/explainers/pool-balance-cards/residential.md',
-  rbu:         '../content/explainers/pool-balance-cards/residential_bonus_units.md',
-  commercial:  '../content/explainers/pool-balance-cards/commercial_floor_area.md',
-  tourist:     '../content/explainers/pool-balance-cards/tourist_accommodation_units.md',
+  residential: 'assets/explainers/pool-balance-cards/residential.md',
+  rbu:         'assets/explainers/pool-balance-cards/residential_bonus_units.md',
+  commercial:  'assets/explainers/pool-balance-cards/commercial_floor_area.md',
+  tourist:     'assets/explainers/pool-balance-cards/tourist_accommodation_units.md',
 };
 // commodity key -> rendered HTML (filled in by loadExplainers; consumed by
 // renderCommodityRows when it stamps the popover content). Initialized to a
@@ -1154,10 +1154,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // the AT tab's tile-info popovers. Cached in this IIFE so flipping
   // commodities is instant after the initial fetch.
   const PBC_EXPLAINER_URLS = {
-    residential:                 '../content/explainers/pool-balance-cards/residential.md',
-    residential_bonus_units:     '../content/explainers/pool-balance-cards/residential_bonus_units.md',
-    commercial_floor_area:       '../content/explainers/pool-balance-cards/commercial_floor_area.md',
-    tourist_accommodation_units: '../content/explainers/pool-balance-cards/tourist_accommodation_units.md',
+    residential:                 'assets/explainers/pool-balance-cards/residential.md',
+    residential_bonus_units:     'assets/explainers/pool-balance-cards/residential_bonus_units.md',
+    commercial_floor_area:       'assets/explainers/pool-balance-cards/commercial_floor_area.md',
+    tourist_accommodation_units: 'assets/explainers/pool-balance-cards/tourist_accommodation_units.md',
   };
   let PBC_EXPLAINERS = {};
 
