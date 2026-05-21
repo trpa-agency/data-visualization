@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Tahoe Development Snapshot - TRPA</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>  <!-- renders the section-title explainer markdown into hover popovers -->
+<style>
+:root {
+  --trpa-blue:    #0072CE;
+  --trpa-navy:    #003B71;
+  --trpa-earth:   #B47E00;
+  --trpa-forest:  #4A6118;
+  --trpa-brick:   #9C3E27;
+  --trpa-olive:   #B5A64C;
+  --trpa-orange:  #E87722;
+  --trpa-purple:  #7B6A8A;
+  --trpa-ice:     #B4CBE8;
+  --bg:           #f5f7fa;
+  --surface:      #ffffff;
+  --border:       #e1e7ee;
+  --text-dark:    #003B71;
+  --text-mid:     #5d6c7e;
+  --text-light:   #8a9bb2;
+  --shadow:       0 2px 16px rgba(0, 59, 113, 0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg); color: var(--text-dark); min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Header matches the public index.html style: single navy band, no accent
+   stripe, color TRPA logo on the left, title block on the right, plain
+   all-white title (no orange highlight). */
+header { background: var(--trpa-navy); color: #fff; display: flex; align-items: stretch; }
+.header-content {
+  padding: 16px 32px 18px; flex: 1;
+  max-width: 1280px; margin: 0 auto; width: 100%;
+  display: flex; align-items: center; gap: 22px;
+}
+.header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
+.header-logo img { height: 58px; width: auto; display: block; }
+.header-text { flex: 1; min-width: 0; }
+.header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
+.header-eyebrow a { color: var(--trpa-ice); }
+header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
+.header-sub { font-size: 0.86rem; color: var(--trpa-ice); margin-top: 4px; opacity: 0.95; max-width: 760px; }
+.header-meta { flex-shrink: 0; font-size: 0.75rem; color: var(--trpa-ice); text-align: right; line-height: 1.7; opacity: 0.85; white-space: nowrap; }
+.live-badge { display: inline-block; background: var(--trpa-forest); color: #fff; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; }
+.asof-badge { display: inline-block; background: var(--trpa-ice); color: var(--trpa-navy); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; margin-top: 4px; }
+@media (max-width: 600px) {
+  .header-content { padding-left: 18px; padding-right: 18px; gap: 14px; }
+  .header-logo img { height: 46px; }
+  header h1 { font-size: 1.25rem; }
+}
+
+/* Section + cards */
+.section { padding: 24px 40px; }
+/* Section title: descriptive label only. Roman numerals + "Section I" tags
+   were dropped 2026-05-18 - the order is already conveyed by top-to-bottom
+   layout, and a public visitor doesn't need the §16.8.2 mapping cue. */
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--trpa-navy);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  margin-bottom: 16px;
+}
+.section-title strong { color: var(--text-dark); font-weight: 700; }
+
+/* Per-section info popover: small "?" icon to the right of each section
+   heading; hover reveals a 380px markdown explainer card. Uses the same
+   pattern as the commodity tile-info / btn-info popovers elsewhere in the
+   dashboard set. Content lives in content/explainers/tahoe-development-snapshot/*.md. */
+.section-info {
+  position: relative;
+  display: inline-flex; align-items: center;
+  margin-left: 10px; vertical-align: middle;
+}
+.section-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.75rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+  letter-spacing: 0; text-transform: none;
+}
+.section-info-icon:hover { background: var(--trpa-blue); color: #fff; }
+.section-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -10px;
+  width: 380px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 59, 113, 0.18);
+  font-size: 0.85rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400; text-align: left;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.section-info-popover h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+.section-info-popover p  { font-size: 0.85rem; color: var(--text-mid); line-height: 1.55; margin-bottom: 8px; }
+.section-info-popover p:last-child { margin-bottom: 0; }
+.section-info-popover a { color: var(--trpa-blue); }
+.section-info-popover strong { color: var(--text-dark); }
+.section-info:hover .section-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+
+/* Existing inventory: baseline cards above the Regional Plan caps. Visually
+   distinct (ice background, no dial) so a viewer reads it as "the floor,"
+   then sees the dials below as "the ceiling added on top." */
+.existing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.existing-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 18px 22px 16px; position: relative; box-shadow: var(--shadow);
+  border-left: 4px solid var(--trpa-ice);
+}
+/* Locked commodity colors (used across all dashboards): Residential =
+   TRPA brand green (forest), Commercial = TRPA earth, Tourist = TRPA
+   purple. Adding a commodity class to any .existing-card applies the
+   matching left-edge stripe. */
+.existing-card.res { border-left-color: var(--trpa-forest); }
+.existing-card.cfa { border-left-color: var(--trpa-earth); }
+.existing-card.tau { border-left-color: var(--trpa-purple); }
+.existing-label { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; }
+.existing-value {
+  font-size: 2.05rem; font-weight: 700; color: var(--text-dark);
+  letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.existing-unit { font-size: 0.78rem; font-weight: 600; color: var(--text-mid); margin-top: 6px; letter-spacing: 0.04em; }
+@media (max-width: 900px) { .existing-grid { grid-template-columns: 1fr; } }
+
+/* Conversion note: callout below all four sections */
+.conversion-note {
+  background: var(--bg); border-left: 4px solid var(--trpa-orange); border-radius: 4px;
+  padding: 14px 20px; margin: 0 40px 24px;
+}
+.conversion-note p { font-size: 0.85rem; color: var(--text-mid); line-height: 1.55; }
+.conversion-note strong { color: var(--text-dark); }
+
+/* Banked by-jurisdiction table */
+.banked-table {
+  width: 100%; border-collapse: collapse; margin-top: 16px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; box-shadow: var(--shadow); font-size: 0.85rem;
+}
+.banked-table th, .banked-table td { padding: 9px 14px; border-top: 1px solid var(--border); text-align: right; font-variant-numeric: tabular-nums; }
+.banked-table th { background: var(--bg); color: var(--text-mid); font-weight: 700; letter-spacing: 0.04em; font-size: 0.7rem; text-transform: uppercase; }
+.banked-table th:first-child, .banked-table td:first-child { text-align: left; font-variant-numeric: normal; }
+.banked-table tr:first-child th { border-top: none; }
+.banked-table tr.total-row td { font-weight: 700; color: var(--text-dark); background: var(--bg); }
+.banked-table td.empty { color: var(--text-light); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; box-shadow: var(--shadow); }
+.card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+.card p { font-size: 0.73rem; color: var(--text-light); margin-bottom: 14px; }
+.card p strong { color: var(--text-mid); }
+
+/* Dead CSS pruned 2026-05-16: gauge-grid / gauge-card / gauge-value /
+   gauge-sub / toggle-bar / toggle-btn / summary-row / live-card classes were
+   left over from the pre-restructure gauge layout. The current page is the
+   4-section roman-numeral grid (i/ii/iii/iv) using .existing-card; none of
+   the gauge classes were referenced in the HTML body. */
+
+.footnote {
+  padding: 14px 40px 22px; font-size: 0.72rem; color: var(--text-light);
+  line-height: 1.6; background: var(--surface); border-top: 1px solid var(--border); margin-top: 24px;
+}
+.footnote code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
+/* Related views cross-link strip - sits between main content + footnote.
+   Standard pattern across the dashboard ecosystem; previously this page
+   relied on in-section "For more information" links only, which left
+   "where do I go next?" partially answered. */
+.related-dashboards {
+  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
+  font-size: 0.82rem; color: var(--text-mid);
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+}
+.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
+.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
+.related-dashboards a:hover { text-decoration: underline; }
+
+@media (max-width: 700px) {
+  header .header-content, .section, .footnote { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Loading overlay - shown on initial page load, dismissed when REST fetches
+   complete. Same pattern as allocation-tracking + the other live-data
+   dashboards: navy-tinted full-screen scrim with a centered white card +
+   a fillable progress bar. */
+#loading-overlay { position: fixed; inset: 0; background: rgba(0, 59, 113, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.loading-card { background: #fff; border-radius: 10px; padding: 36px 48px; text-align: center; min-width: 260px; }
+.loading-card h3 { font-size: 1rem; color: var(--trpa-navy); margin-bottom: 20px; }
+.lb-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+#loading-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--trpa-blue), var(--trpa-forest)); border-radius: 2px; transition: width 0.3s; }
+
+/* Public-facing agency footer (added 2026-05-18 per FOOTER_PATTERN.md).
+   Copyright + trpa.gov + feedback row at the bottom of every dashboard. */
+footer {
+  padding: 18px 32px 26px;
+  font-size: 0.74rem; color: var(--text-light);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: 0;
+  text-align: center;
+}
+footer a { color: var(--trpa-blue); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-card">
+    <h3>Loading basin-wide totals&hellip;</h3>
+    <div class="lb-bg"><div id="loading-bar"></div></div>
+  </div>
+</div>
+
+<header>
+  <div class="header-content">
+    <a class="header-logo" href="https://www.trpa.gov/" aria-label="Tahoe Regional Planning Agency">
+      <img src="assets/trpa-logo-color.png" alt="TRPA" />
+    </a>
+    <div class="header-text">
+      <h1>Tahoe Development Snapshot</h1>
+      <div class="header-sub">
+        Residential, bonus, tourist, and commercial development assigned to projects across the Tahoe Region.
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge">Live Data</div>
+      <div class="asof-badge">As of 2025</div>
+    </div>
+  </div>
+</header>
+
+<!-- Four basin-wide totals sections (Ken's 2026-05-15 restructure):
+       i.   Existing development on the ground  (live from PDH layer 0)
+       ii.  Banked development                  (live from Cumulative_Accounting layer 9, totaled)
+       iii. Remaining allocations - Reserved, not constructed
+       iv.  Remaining allocations - Not reserved, not released
+
+     Sections iii + iv use values that came directly from the analyst's
+     2026-05-15 review. Path to live REST: layer 5 (pool balance report) carries
+     ApprovedTransactionsQuantity (reserved) and BalanceRemaining (not
+     reserved) per commodity - once the field-mapping confirmation lands,
+     renderRemaining() flips to live. -->
+<div class="section">
+  <div class="section-title">Existing development on the ground<span class="section-info" aria-label="What does this mean?"><span class="section-info-icon">?</span><div class="section-info-popover" id="info-existing"><p><em>Loading explainer&hellip;</em></p></div></span></div>
+  <div class="existing-grid">
+    <div class="existing-card res">
+      <div class="existing-label">Residential</div>
+      <div class="existing-value" id="exist-res">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+    <div class="existing-card cfa">
+      <div class="existing-label">Commercial floor area</div>
+      <div class="existing-value" id="exist-cfa">&hellip;</div>
+      <div class="existing-unit">sq ft</div>
+    </div>
+    <div class="existing-card tau">
+      <div class="existing-label">Tourist accommodation</div>
+      <div class="existing-value" id="exist-tau">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+  </div>
+</div>
+
+<!-- Banked Development Rights - flat totals, summed from layer 9 by renderBanked() -->
+<div class="section">
+  <div class="section-title">Banked development<span class="section-info" aria-label="What is banked development?"><span class="section-info-icon">?</span><div class="section-info-popover" id="info-banked"><p><em>Loading explainer&hellip;</em></p></div></span></div>
+  <div class="existing-grid" id="banked-totals">
+    <!-- 3 commodity totals populated by renderBanked() -->
+  </div>
+</div>
+
+<!-- Reserved, not constructed: allocations drawn to a parcel but not yet built.
+     Hardcoded from the analyst's 2026-05-15 tally; path-to-live requires
+     layer 4 Construction_Status (2012 RP only; gives 151 RES) plus a 1987-RP
+     equivalent that doesn't yet expose construction status. Updates roll in
+     when those land. -->
+<div class="section">
+  <div class="section-title">Reserved, not constructed<span class="section-info" aria-label="What does reserved, not constructed mean?"><span class="section-info-icon">?</span><div class="section-info-popover" id="info-reserved"><p><em>Loading explainer&hellip;</em></p></div></span></div>
+  <div class="existing-grid">
+    <div class="existing-card res">
+      <div class="existing-label">Residential</div>
+      <div class="existing-value" id="rnc-res">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+    <div class="existing-card cfa">
+      <div class="existing-label">Commercial floor area</div>
+      <div class="existing-value" id="rnc-cfa">&hellip;</div>
+      <div class="existing-unit">sq ft</div>
+    </div>
+    <div class="existing-card tau">
+      <div class="existing-label">Tourist accommodation</div>
+      <div class="existing-value" id="rnc-tau">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+  </div>
+</div>
+
+<!-- Not reserved + not released: still available in pools, plus the unreleased
+     reserves. Live from Cumulative_Accounting layer 10 ("Source=Grand Total"
+     rows). Residential = RES.TotalBalanceRemaining + RBU.TotalBalanceRemaining
+     (Ken's residential framing folds in bonus units). -->
+<div class="section">
+  <div class="section-title">Not reserved and not released<span class="section-info" aria-label="What does not reserved and not released mean?"><span class="section-info-icon">?</span><div class="section-info-popover" id="info-available"><p><em>Loading explainer&hellip;</em></p></div></span></div>
+  <div class="existing-grid">
+    <div class="existing-card res">
+      <div class="existing-label">Residential</div>
+      <div class="existing-value" id="rem-iv-res">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+    <div class="existing-card cfa">
+      <div class="existing-label">Commercial floor area</div>
+      <div class="existing-value" id="rem-iv-cfa">&hellip;</div>
+      <div class="existing-unit">sq ft</div>
+    </div>
+    <div class="existing-card tau">
+      <div class="existing-label">Tourist accommodation</div>
+      <div class="existing-value" id="rem-iv-tau">&hellip;</div>
+      <div class="existing-unit">units</div>
+    </div>
+  </div>
+</div>
+
+<div class="section conversion-note">
+  <p><strong>Note:</strong> These existing and remaining balances and total development potential for each type of development will vary due to permitted conversions between development right categories.</p>
+</div>
+
+<div class="related-dashboards">
+  <strong>Related views:</strong>
+  <a href="allocation-tracking.html">&rarr; Allocation Tracking (per-commodity detail and pool balances)</a>
+  <a href="residential-additions-by-source.html">&rarr; Residential Additions by Source (where each year's units came from)</a>
+  <a href="development_history.html">&rarr; Development History (year-over-year trends)</a>
+  <a href="index.html">All dashboards</a>
+</div>
+
+<div class="footnote">
+  <strong>Source:</strong> Tahoe Regional Planning Agency. Allocation and pool totals reflect the <a href="https://parcels.laketahoeinfo.org/DevelopmentRightPool/DevelopmentRightPoolBalanceReport">Lake Tahoe Info Pool Balance Report</a> against the maximums established in the <a href="https://www.trpa.gov/regional-plan/">Lake Tahoe Regional Plan</a>.</div>
+
+<script>
+const TRPA = {
+  blue:'#0072CE', navy:'#003B71', earth:'#B47E00', forest:'#4A6118',
+  brick:'#9C3E27', olive:'#B5A64C', orange:'#E87722', purple:'#7B6A8A',
+  ice:'#B4CBE8',
+};
+// Banked development rights: live from Cumulative_Accounting layer 9
+// ("Development Right Banked By Jurisdiction"). 24-row long-form table
+// (6 jurisdictions x 4 commodities). Source-of-load was
+// data/processed_data/banked_long.csv (the analyst's Apr 2026 snapshot).
+const BANKED_REST_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/9/query'
+  + '?where=1%3D1'
+  + '&outFields=Jurisdiction%2CCommodity%2CValue'
+  + '&returnGeometry=false&f=json';
+
+// Section iv "Not reserved and not released": live from Cumulative_Accounting
+// layer 10 ("Development Right Allocation Balances", Source='Grand Total').
+// Section iv values = TotalBalanceRemaining per commodity, with residential
+// = RES + RBU (Ken's framing folds bonus units into residential).
+const BALANCES_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/10/query'
+  + '?where=' + encodeURIComponent("Source='Grand Total'")
+  + '&outFields=CommodityCode%2CTotalBalanceRemaining%2CAsOfDate'
+  + '&returnGeometry=false&f=json';
+
+// Section iii "Reserved, not constructed": live from Cumulative_Accounting
+// layer 15 (Development Right Reserved Not Constructed). 3 rows, one per
+// commodity. Path to true derivation: needs Construction_Status field on
+// layer 3 (1987 RP allocations) plus full row-level coverage on layer 4
+// (only 2012 RP residential today).
+const RESERVED_NOT_CONSTRUCTED_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/15/query'
+  + '?where=1%3D1'
+  + '&outFields=CommodityCode%2CCommodity%2CUnits%2CUnit%2CAsOfDate'
+  + '&returnGeometry=false&f=json';
+
+// Cumulative_Accounting layer 0 = Parcel Development History, the system of
+// record for what is on the ground (one row per parcel-year). The Existing
+// Development section sums Residential_Units / TouristAccommodation_Units /
+// CommercialFloorArea_SqFt across all parcels at the most recent YEAR.
+const PDH_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/0/query';
+const PDH_MAXYEAR_URL = PDH_URL
+  + '?where=1%3D1'
+  + '&outStatistics=' + encodeURIComponent(JSON.stringify([{
+      statisticType: 'max',
+      onStatisticField: 'YEAR',
+      outStatisticFieldName: 'max_year'
+    }]))
+  + '&returnGeometry=false&f=json';
+function pdhTotalsUrl(year) {
+  return PDH_URL
+    + '?where=' + encodeURIComponent('YEAR=' + year)
+    + '&outStatistics=' + encodeURIComponent(JSON.stringify([
+        { statisticType: 'sum', onStatisticField: 'Residential_Units',          outStatisticFieldName: 'res' },
+        { statisticType: 'sum', onStatisticField: 'TouristAccommodation_Units', outStatisticFieldName: 'tau' },
+        { statisticType: 'sum', onStatisticField: 'CommercialFloorArea_SqFt',   outStatisticFieldName: 'cfa' },
+      ]))
+    + '&returnGeometry=false&f=json';
+}
+// Populate the Existing Development tiles by chaining two PDH queries:
+// 1) max(YEAR) - to pin to the most recent parcel-year on file
+// 2) sum(Residential_Units, TouristAccommodation_Units, CommercialFloorArea_SqFt)
+//    where YEAR = max(YEAR) - basin-wide totals on the ground at that year
+async function renderExisting() {
+  try {
+    const yr = await fetch(PDH_MAXYEAR_URL, { cache: 'no-cache' });
+    if (!yr.ok) throw new Error('max-year HTTP ' + yr.status);
+    const yrJ = await yr.json();
+    const maxYear = Number(yrJ.features?.[0]?.attributes?.max_year);
+    if (!Number.isFinite(maxYear)) throw new Error('max-year missing from response');
+
+    const tr = await fetch(pdhTotalsUrl(maxYear), { cache: 'no-cache' });
+    if (!tr.ok) throw new Error('totals HTTP ' + tr.status);
+    const tj = await tr.json();
+    const a = tj.features?.[0]?.attributes || {};
+
+    const resStr = (Number(a.res) || 0).toLocaleString();
+    const cfaStr = Math.round(Number(a.cfa) || 0).toLocaleString();
+    const tauStr = (Number(a.tau) || 0).toLocaleString();
+    document.getElementById('exist-res').textContent  = resStr;
+    document.getElementById('exist-cfa').textContent  = cfaStr;
+    document.getElementById('exist-tau').textContent  = tauStr;
+    // #exist-year was removed from section i's title (the As-of badge in the
+    // header carries the snapshot date now); guard the assignment so the
+    // missing element doesn't throw.
+    const yrEl = document.getElementById('exist-year');
+    if (yrEl) yrEl.textContent = maxYear;
+  } catch (e) {
+    console.warn('PDH totals fetch failed:', e.message);
+    document.getElementById('exist-res').textContent  = '49,018';
+    document.getElementById('exist-cfa').textContent  = '6,583,769';
+    document.getElementById('exist-tau').textContent  = '10,761';
+  }
+}
+
+// Render the Banked Development Rights section live from
+// Cumulative_Accounting layer 9. Layer carries one row per (Jurisdiction,
+// Commodity, Value). Per Ken's 2026-05-15 restructure: collapse to 3 commodity
+// totals (Residential = MFRUU + SFRUU). No per-jurisdiction table here -
+// keeps the visual parity with the other 3 sections on the page.
+async function renderBanked() {
+  if (!BANKED_REST_URL) return;
+  let features = [];
+  try {
+    const r = await fetch(BANKED_REST_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const j = await r.json();
+    features = Array.isArray(j.features) ? j.features : [];
+  } catch (e) {
+    console.warn('Banked layer 9 fetch failed:', e.message);
+    return;
+  }
+
+  // Sum across all jurisdictions to commodity totals.
+  const totals = { MFRUU: 0, SFRUU: 0, CFA: 0, TAU: 0 };
+  for (const f of features) {
+    const a = f.attributes || {};
+    const c = a.Commodity;
+    const v = Number(a.Value) || 0;
+    if (c in totals) totals[c] += v;
+  }
+
+  // Collapse MFRUU + SFRUU into a single Residential count per Ken.
+  const residentialBanked = totals.MFRUU + totals.SFRUU;
+
+  document.getElementById('banked-totals').innerHTML = [
+    { lbl: 'Residential',          val: residentialBanked, unit: 'units', cls: 'res' },
+    { lbl: 'Commercial floor area', val: totals.CFA,        unit: 'sq ft', cls: 'cfa' },
+    { lbl: 'Tourist accommodation', val: totals.TAU,        unit: 'units', cls: 'tau' },
+  ].map(c => `
+    <div class="existing-card ${c.cls}">
+      <div class="existing-label">${c.lbl}</div>
+      <div class="existing-value">${fmt(c.val)}</div>
+      <div class="existing-unit">${c.unit}</div>
+    </div>`).join('');
+}
+
+function fmt(n) {
+  if (n == null) return '0';
+  return n >= 1000 ? Math.round(n).toLocaleString() : String(n);
+}
+
+// Render section iv (Not reserved and not released) live from layer 10.
+// RES = RES.TotalBalanceRemaining + RBU.TotalBalanceRemaining (Ken's
+// residential framing includes bonus units); CFA + TAU are direct reads.
+// 1-unit drift vs the analyst's hand-tally (e.g., 2,518 vs 2,519 RES) is
+// refresh lag against Corral; matches when Layer 10 republishes.
+async function renderRemaining() {
+  try {
+    const r = await fetch(BALANCES_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Layer 10 HTTP ' + r.status);
+    const j = await r.json();
+    const rows = {};
+    let asOf = '';
+    for (const f of (j.features || [])) {
+      const a = f.attributes || {};
+      if (a.CommodityCode) rows[a.CommodityCode] = a;
+      if (a.AsOfDate)      asOf = a.AsOfDate;
+    }
+    const resBal = (rows.RES?.TotalBalanceRemaining || 0) + (rows.RBU?.TotalBalanceRemaining || 0);
+    const cfaBal = rows.CFA?.TotalBalanceRemaining || 0;
+    const tauBal = rows.TAU?.TotalBalanceRemaining || 0;
+    document.getElementById('rem-iv-res').textContent = fmt(resBal);
+    document.getElementById('rem-iv-cfa').textContent = fmt(cfaBal);
+    document.getElementById('rem-iv-tau').textContent = fmt(tauBal);
+    // (Snapshot year now lives in the header's As-of badge, not in each
+    // section title - the per-section spans were removed 2026-05-18.)
+  } catch (e) {
+    console.warn('Section iv (layer 10) fetch failed; keeping placeholders:', e.message);
+    document.getElementById('rem-iv-res').textContent = '2,519';
+    document.getElementById('rem-iv-cfa').textContent = '488,894';
+    document.getElementById('rem-iv-tau').textContent = '204';
+  }
+}
+
+// Render section iii (Reserved, not constructed) from the staged JSON / layer 14.
+// Until Layer 3 (1987 RP) exposes Construction_Status, the values reflect the
+// analyst's hand-tally rather than a database-derived count.
+async function renderReservedNotConstructed() {
+  try {
+    const r = await fetch(RESERVED_NOT_CONSTRUCTED_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Layer 14 HTTP ' + r.status);
+    const js = await r.json();
+    const rows = Array.isArray(js.rows)     ? js.rows
+               : Array.isArray(js.features) ? js.features.map(f => f.attributes)
+               : [];
+    const byCode = Object.fromEntries(rows.map(r => [r.CommodityCode, r]));
+    document.getElementById('rnc-res').textContent = fmt(byCode.RES?.Units || 0);
+    document.getElementById('rnc-cfa').textContent = fmt(byCode.CFA?.Units || 0);
+    document.getElementById('rnc-tau').textContent = fmt(byCode.TAU?.Units || 0);
+    // (Snapshot year now lives in the header's As-of badge.)
+  } catch (e) {
+    console.warn('Section iii (layer 14) fetch failed; keeping placeholders:', e.message);
+    document.getElementById('rnc-res').textContent = '698';
+    document.getElementById('rnc-cfa').textContent = '46,962';
+    document.getElementById('rnc-tau').textContent = '138';
+  }
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+// Per-section markdown explainers. Each section title hosts a "?" icon
+// whose popover renders the matching markdown file via marked.js. Fetched
+// in parallel with the data renderers; failure is non-fatal (popover
+// stays on "Loading explainer..." which is fine if the markdown can't
+// load). Same pattern used by allocation-tracking + pool-balance-cards.
+const SECTION_EXPLAINER_URLS = {
+  'info-existing': '../content/explainers/tahoe-development-snapshot/existing.md',
+  'info-banked':   '../content/explainers/tahoe-development-snapshot/banked.md',
+  'info-reserved': '../content/explainers/tahoe-development-snapshot/reserved.md',
+  'info-available':'../content/explainers/tahoe-development-snapshot/available.md',
+};
+async function loadSectionExplainers() {
+  await Promise.all(Object.entries(SECTION_EXPLAINER_URLS).map(async ([id, url]) => {
+    try {
+      const r = await fetch(url, { cache: 'no-cache' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const md = await r.text();
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = marked.parse(md);
+    } catch (e) {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = '<p><em>Explainer unavailable (' + e.message + ').</em></p>';
+    }
+  }));
+}
+
+// Four flat-totals sections. Live REST: section i = PDH layer 0; section ii
+// = banked layer 9; section iii = reserved-not-constructed staged JSON
+// (layer 14 candidate); section iv = balances layer 10.
+async function main() {
+  const bar = document.querySelector('#loading-bar');
+  if (bar) bar.style.width = '30%';
+  // Run all four section renderers in parallel; dismiss the loading overlay
+  // when they all settle (success or fallback). Settled, not just resolved,
+  // so a single failed REST call doesn't leave the splash up forever - each
+  // render function has its own try/catch that drops to fallback values.
+  await Promise.allSettled([
+    renderExisting(),
+    renderBanked(),
+    renderReservedNotConstructed(),
+    renderRemaining(),
+    loadSectionExplainers(),
+  ]);
+  if (bar) bar.style.width = '100%';
+  const overlay = document.querySelector('#loading-overlay');
+  if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 200);
+}
+document.addEventListener('DOMContentLoaded', main);
+</script>
+
+<footer>
+  &copy; 2026 Tahoe Regional Planning Agency &middot;
+  <a href="https://www.trpa.gov/">trpa.gov</a> &middot;
+  <a href="mailto:info@trpa.gov?subject=Dashboard%20feedback">Feedback</a>
+</footer>
+</body>
+</html>

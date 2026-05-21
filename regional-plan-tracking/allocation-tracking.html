@@ -1,0 +1,1223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Allocation Tracking - TRPA</title>
+<link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>                       <!-- pool-balance tab drilldown charts -->
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>  <!-- renders the commodity explainer markdown into the tile-info hover popovers -->
+
+<style>
+:root {
+  /* TRPA brand palette (PMS 285C primary) */
+  --trpa-blue:    #0072CE;
+  --trpa-navy:    #003B71;
+  --trpa-earth:   #B47E00;
+  --trpa-forest:  #4A6118;
+  --trpa-brick:   #9C3E27;
+  --trpa-olive:   #B5A64C;
+  --trpa-orange:  #E87722;
+  --trpa-purple:  #7B6A8A;
+  --trpa-ice:     #B4CBE8;
+
+  /* Functional neutrals */
+  --bg:          #f5f7fa;
+  --surface:     #ffffff;
+  --border:      #e1e7ee;
+  --text-dark:   #003B71;
+  --text-mid:    #5d6c7e;
+  --text-light:  #8a9bb2;
+  --shadow:      0 2px 16px rgba(0, 59, 113, 0.08);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text-dark);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Header (matches index.html style: navy band, color TRPA logo on
+   left, title block on right, no accent gradient, all-white title) ── */
+header { background: var(--trpa-navy); color: #fff; display: flex; align-items: stretch; }
+.header-content {
+  padding: 16px 32px 18px; flex: 1;
+  max-width: 1280px; margin: 0 auto; width: 100%;
+  display: flex; align-items: center; gap: 22px;
+}
+.header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
+.header-logo img { height: 58px; width: auto; display: block; }
+.header-text { flex: 1; min-width: 0; }
+.header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
+header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
+.header-sub { font-size: 0.86rem; color: var(--trpa-ice); margin-top: 4px; opacity: 0.95; max-width: 760px; }
+.header-meta { flex-shrink: 0; font-size: 0.75rem; color: var(--trpa-ice); text-align: right; line-height: 1.7; opacity: 0.85; white-space: nowrap; }
+.live-badge { display: inline-block; background: var(--trpa-forest); color: #fff; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; }
+.asof-badge { display: inline-block; background: var(--trpa-ice); color: var(--trpa-navy); font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 8px; border-radius: 2px; margin-top: 4px; }
+@media (max-width: 600px) {
+  .header-content { padding-left: 18px; padding-right: 18px; gap: 14px; }
+  .header-logo img { height: 46px; }
+  header h1 { font-size: 1.25rem; }
+}
+
+/* ── Tab nav: two views in one dashboard (basin overview / per-jurisdiction
+   pool balances). Full-bleed surface band matching the header pattern:
+   .tab-nav-band spans the entire viewport (background + bottom border);
+   .tab-nav inside is centered + capped at the 1280px content width like
+   .header-content. ── */
+.tab-nav-band {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+}
+.tab-nav {
+  max-width: 1280px; margin: 0 auto;
+  padding: 0 32px;
+  display: flex; gap: 4px;
+}
+.tab-btn {
+  padding: 14px 22px; border: none; background: none;
+  font-family: inherit; font-size: 0.88rem; font-weight: 600;
+  color: var(--text-mid); cursor: pointer;
+  border-bottom: 3px solid transparent; margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tab-btn:hover { color: var(--trpa-navy); }
+.tab-btn.active { color: var(--trpa-navy); border-bottom-color: var(--trpa-blue); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+@media (max-width: 600px) {
+  .tab-nav { padding-left: 18px; padding-right: 18px; }
+  .tab-btn { padding: 12px 14px; font-size: 0.82rem; }
+}
+
+/* ── Commodity stacked-bar tiles (Option 1 Overview redesign, v2)
+   Replaced the donut variant (2026-05-16): donut/pie reads slice angles which
+   the eye judges poorly with 4 segments. Horizontal stacked bar lets the user
+   compare segment LENGTHS, which read 3-4x more accurately. Same idiom the
+   Tracker uses for its pipeline bars, so the two dashboards visually rhyme.
+   Hero number sits above the bar (cap + unit sublabel); segments live in the
+   bar; per-segment breakdown sits in a 3-column legend below (name | value | %). */
+.donut-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;
+}
+@media (max-width: 980px) { .donut-grid { grid-template-columns: 1fr; } }
+.donut-tile {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 22px 24px 20px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column;
+  position: relative;
+  /* No overflow: hidden - it was clipping the hover popover at the card
+     boundary. The top stripe (::before) gets its own border-radius so
+     the rounded top corners still work without parent clipping. */
+}
+/* Locked commodity colors as a 4px top stripe (consistent with the Tracker's
+   .existing-card.res/.cfa/.tau pattern). Residential = forest, Commercial =
+   earth, Tourist = purple, RBU = olive. */
+.donut-tile::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: var(--tile-accent, var(--trpa-ice));
+  border-radius: 10px 10px 0 0;  /* match the parent .donut-tile border-radius so corners stay rounded */
+}
+.donut-tile[data-commodity="residential"] { --tile-accent: var(--trpa-forest); }
+.donut-tile[data-commodity="rbu"]         { --tile-accent: var(--trpa-olive);  }
+.donut-tile[data-commodity="commercial"]  { --tile-accent: var(--trpa-earth);  }
+.donut-tile[data-commodity="tourist"]     { --tile-accent: var(--trpa-purple); }
+.donut-tile-name {
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--trpa-navy); margin-bottom: 4px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* "What is this commodity?" hover popover. The "?" icon stays as a visual
+   cue, but the popover triggers on hover of the WHOLE tile (.donut-tile)
+   so users don't have to pixel-hunt the icon. Formatting matches the
+   .btn-info-popover pattern used on Tab 2 (Pool Balances) so the two
+   tabs feel like one dashboard. Content from content/explainers/pool-balance-cards/*.md
+   (shared with the Pool Balances tab - single source). */
+.tile-info {
+  position: relative; display: inline-flex; vertical-align: middle;
+}
+.tile-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.68rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+  letter-spacing: 0; text-transform: none;
+}
+.donut-tile:hover .tile-info-icon { background: var(--trpa-blue); color: #fff; }
+.tile-info-popover {
+  /* Popover is now a direct child of .donut-tile (not inside .tile-info)
+     so absolute positioning anchors to the whole tile. top: calc(100% +
+     10px) drops it 10px below the bottom of the tile, floating over the
+     page as a real tooltip layer. */
+  position: absolute; top: calc(100% + 10px); left: 0;
+  width: 380px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 59, 113, 0.18);
+  font-size: 0.85rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  text-align: left;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.tile-info-popover h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+.tile-info-popover p  { font-size: 0.85rem; color: var(--text-mid); line-height: 1.55; margin-bottom: 8px; }
+.tile-info-popover p:last-child { margin-bottom: 0; }
+.tile-info-popover a {
+  color: var(--trpa-blue);
+  overflow-wrap: anywhere;  /* defensive backstop: long URLs without spaces still wrap, won't overflow the 380px card */
+}
+.tile-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.tile-info-popover em { color: var(--text-light); font-style: italic; }
+/* Popover triggers on the WHOLE tile hover, not just the icon - matches
+   Pool Balance Cards Tab 2 idiom where the whole button is the trigger. */
+.donut-tile:hover .tile-info-popover {
+  opacity: 1; pointer-events: auto;
+  transform: translateY(-2px);
+}
+/* (Caret rule removed - the popover now anchors to the bottom of the
+   whole tile, not the small "?" icon, so a caret pointing up from the
+   icon would land in the wrong place. The popover's position below the
+   tile is visual cue enough.) */
+.donut-tile-desc { font-size: 0.78rem; color: var(--text-mid); margin-bottom: 14px; line-height: 1.45; }
+
+/* Hero row: big cap number + sublabel that carries the unit ("sq ft total
+   since-1987 authorized" / "units total since-1987 authorized"). Putting the
+   unit in the label keeps the hero number tight ("1M" vs "1,000,000 sq ft"). */
+.tile-hero {
+  display: flex; align-items: baseline; gap: 14px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--border); padding-bottom: 14px;
+}
+.tile-hero-value {
+  font-size: 2.5rem; font-weight: 700; color: var(--text-dark);
+  letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.tile-hero-label {
+  font-size: 0.78rem; color: var(--text-mid); line-height: 1.35;
+}
+.tile-hero-label strong { color: var(--text-dark); font-weight: 600; }
+
+/* Stacked horizontal bar: one rounded track, segments share the row, hover
+   brightens the segment. flex values are the raw counts so widths are
+   proportional automatically (no manual percent math). */
+.tile-stack {
+  display: flex; height: 32px; border-radius: 6px; overflow: visible;
+  background: var(--bg); border: 1px solid var(--border); margin-bottom: 14px;
+  position: relative;   /* container for the absolute-positioned tooltips below */
+}
+.tile-stack-segment {
+  /* Clean colored block - inline value text was removed (hover tooltip + legend below carry the numbers). */
+  transition: filter 0.15s; min-width: 0;
+  position: relative;
+}
+/* First/last segment keep the rounded corners (overflow:visible above lets
+   the tooltip escape, so we have to clip the segments themselves). */
+.tile-stack-segment:first-child { border-radius: 6px 0 0 6px; }
+.tile-stack-segment:last-child  { border-radius: 0 6px 6px 0; }
+.tile-stack-segment:only-child  { border-radius: 6px; }
+.tile-stack-segment:hover { filter: brightness(1.08); }
+/* Custom hover tooltip: white card, ice border, navy text. Matches the
+   popover styling used across the dashboard set. No native title-attribute delay. */
+.tile-stack-segment::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: #fff;
+  border: 1px solid var(--trpa-ice);
+  color: var(--trpa-navy);
+  font-size: 0.78rem; font-weight: 600;
+  padding: 7px 11px; border-radius: 4px;
+  white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.12s, transform 0.12s;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0, 59, 113, 0.15);
+}
+.tile-stack-segment:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-2px);
+}
+/* Caret pointing down from the tooltip to the segment */
+.tile-stack-segment::before {
+  content: '';
+  position: absolute;
+  bottom: calc(100% + 2px); left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.12s;
+  z-index: 10;
+}
+.tile-stack-segment:hover::before { opacity: 1; }
+
+/* 3-column legend: swatch+name | value | %. Right-aligns the numerics so
+   they form a clean vertical column the eye can scan top-to-bottom. */
+.tile-legend {
+  display: grid; grid-template-columns: 1fr auto auto;
+  row-gap: 7px; column-gap: 14px;
+  font-size: 0.85rem; color: var(--text-mid);
+}
+.tile-legend-name {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; color: var(--text-dark);
+}
+.tile-legend-name .swatch { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.tile-legend-value {
+  font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text-dark);
+  text-align: right; white-space: nowrap;
+}
+.tile-legend-pct {
+  font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-mid);
+  text-align: right; white-space: nowrap; min-width: 38px;
+}
+
+/* ── Commodity rows (Overview tab; legacy original layout, not used in Option 1) ── */
+.comm-row { margin-bottom: 22px; }
+.comm-row:last-child { margin-bottom: 0; }
+.comm-row-label {
+  font-size: 0.8rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-dark);
+  margin-bottom: 9px; padding-left: 2px;
+}
+/* auto-fit so 4 cards (TAU) and 5 cards (residential / CFA) lay out cleanly */
+.comm-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.comm-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 18px 20px 16px; position: relative; box-shadow: var(--shadow);
+}
+.kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 8px 8px 0 0; }
+.kpi-label {
+  font-size: 0.66rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-light); margin-bottom: 7px;
+}
+.kpi-value {
+  font-size: 1.85rem; font-weight: 700; color: var(--text-dark);
+  letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.kpi-sub { font-size: 0.71rem; color: var(--text-mid); margin-top: 7px; line-height: 1.4; }
+
+/* ── Sections / Cards ── */
+.section { padding: 24px 40px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 20px 24px; box-shadow: var(--shadow); }
+.card h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+.card p  { font-size: 0.73rem; color: var(--text-light); margin-bottom: 14px; }
+
+/* ── Pool Balances tab (folded in from the former pool-balance-cards.html) ── */
+/* KPI strip. The 12px top margin is the visible gap between the tab nav's
+   active-tab underline (3px blue) and the KPI cards' top accent strip
+   (also 3px). Without it, the two colored 3px lines visually merged into
+   one fat band where they met. */
+/* 3-col default (RBU + TAU); 4-col when the active commodity has an
+   unreleased reserve (RES + CFA). The .has-unreleased class is toggled
+   by updateKPIs() based on getUnreleasedTotal(). */
+.kpi-row { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin-top: 12px; }
+.kpi-row.has-unreleased { grid-template-columns: repeat(4, 1fr); }
+.kpi-card-unreleased { display: none; }
+.kpi-row.has-unreleased .kpi-card-unreleased { display: block; }
+.kpi-card { padding: 22px 28px 18px; border-right: 1px solid var(--border); position: relative; }
+.kpi-card:last-child { border-right: none; }
+.kpi-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.kpi-label { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin-bottom: 8px; }
+.kpi-value { font-size: 2.25rem; font-weight: 700; color: var(--text-dark); letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 0.73rem; color: var(--text-mid); margin-top: 7px; line-height: 1.4; }
+/* Commodity toggle toolbar */
+.toolbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 40px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tb-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin-right: 4px; }
+.tb-divider { width: 1px; height: 20px; background: var(--border); margin: 0 8px; }
+.tb-btn { padding: 6px 14px; border-radius: 4px; border: 1.5px solid var(--border); background: #fff; color: var(--text-mid); font-size: 0.78rem; font-family: inherit; cursor: pointer; transition: all 0.15s; font-weight: 600; }
+.tb-btn:hover { border-color: var(--trpa-blue); color: var(--trpa-blue); }
+.tb-btn.active { background: var(--trpa-navy); border-color: var(--trpa-navy); color: #fff; }
+.tb-btn.active:hover { color: #fff; }
+.sort-count { margin-left: auto; font-size: 0.74rem; color: var(--text-light); }
+/* Cards grid */
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; }
+.pool-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 18px 20px; box-shadow: var(--shadow); position: relative;
+  cursor: pointer; transition: transform 0.12s, box-shadow 0.12s;
+}
+.pool-card:hover { transform: translateY(-2px); box-shadow: 0 4px 24px rgba(0, 59, 113, 0.12); }
+.pool-card.selected { outline: 3px solid var(--trpa-blue); outline-offset: -3px; }
+.pool-card-all { background: linear-gradient(180deg, rgba(0, 59, 113, 0.04) 0%, var(--surface) 100%); border-top: 3px solid var(--trpa-navy); }
+.pool-card-all .pool-jurisdiction { color: var(--trpa-navy); }
+.pool-accent { position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 8px 8px 0 0; }
+.pool-name { font-size: 0.82rem; font-weight: 700; color: var(--text-dark); margin-top: 8px; line-height: 1.25; }
+.pool-jurisdiction { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-light); margin-bottom: 4px; }
+.pool-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px; }
+.pool-remaining { font-size: 2rem; font-weight: 700; color: var(--text-dark); letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.pool-of { font-size: 0.72rem; color: var(--text-light); text-align: right; }
+.pool-of strong { color: var(--text-mid); font-weight: 600; }
+.pool-bar-track { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-top: 12px; }
+.pool-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+.pool-stats { display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.69rem; color: var(--text-mid); }
+.pool-pct-used { color: var(--text-mid); font-weight: 600; }
+/* Detail panel (drilldown on card click) */
+.detail-panel {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 20px 24px; box-shadow: var(--shadow); margin-top: 20px; min-height: 400px;
+}
+.detail-panel h3 { font-size: 1.05rem; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+.detail-panel .sub { font-size: 0.75rem; color: var(--text-light); margin-bottom: 16px; }
+.detail-empty { color: var(--text-light); font-size: 0.85rem; padding: 80px 0; text-align: center; }
+/* Commodity-button "?" info popovers - mirrors the tile-info pattern on
+   Tab 1. Each commodity button hosts a small "?" icon; hover renders the
+   matching markdown explainer in a tooltip card. Replaces the old "What's
+   a residential allocation?" full-card explainer that lived under the
+   cards grid (legacy Pool Balance Cards pattern). */
+.btn-info { position: relative; display: inline-flex; align-items: center; margin-left: 6px; vertical-align: middle; }
+.btn-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.6rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+  letter-spacing: 0; text-transform: none;
+}
+.btn-info-icon:hover { background: var(--trpa-blue); color: #fff; }
+.btn-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -10px;
+  width: 380px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 59, 113, 0.18);
+  font-size: 0.85rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  text-align: left;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.btn-info-popover h3 { font-size: 0.95rem; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; }
+.btn-info-popover p { font-size: 0.85rem; color: var(--text-mid); line-height: 1.55; margin-bottom: 8px; }
+.btn-info-popover p:last-child { margin-bottom: 0; }
+.btn-info-popover a { color: var(--trpa-blue); }
+.btn-info-popover strong { color: var(--text-dark); }
+.btn-info:hover .btn-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+@media (max-width: 900px) {
+  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .kpi-card { border-bottom: 1px solid var(--border); }
+  .toolbar { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ── Footnote ── */
+.footnote {
+  padding: 18px 40px 26px; font-size: 0.74rem; color: var(--text-light);
+  line-height: 1.6; background: var(--surface); border-top: 1px solid var(--border);
+}
+.footnote a { color: var(--trpa-blue); text-decoration: none; }
+.footnote a:hover { text-decoration: underline; }
+.footnote strong { color: var(--text-mid); font-weight: 600; }
+/* "Related views" cross-link strip; sits between main content + footnote */
+.related-dashboards {
+  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
+  font-size: 0.82rem; color: var(--text-mid);
+  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+}
+.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
+.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
+.related-dashboards a:hover { text-decoration: underline; }
+
+/* ── Loading ── */
+#loading-overlay { position: fixed; inset: 0; background: rgba(0, 59, 113, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+.loading-card { background: #fff; border-radius: 10px; padding: 36px 48px; text-align: center; min-width: 260px; }
+.loading-card h3 { font-size: 1rem; color: var(--trpa-navy); margin-bottom: 20px; }
+.lb-bg { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+#loading-bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--trpa-blue), var(--trpa-forest)); border-radius: 2px; transition: width 0.3s; }
+
+@media (max-width: 900px) {
+  header .header-content, .section { padding-left: 16px; padding-right: 16px; }
+}
+
+/* Public-facing agency footer (added 2026-05-18 per FOOTER_PATTERN.md).
+   Copyright + trpa.gov + feedback row at the bottom of every dashboard. */
+footer {
+  padding: 18px 32px 26px;
+  font-size: 0.74rem; color: var(--text-light);
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  margin-top: 0;
+  text-align: center;
+}
+footer a { color: var(--trpa-blue); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loading-card">
+    <h3>Loading allocation data&hellip;</h3>
+    <div class="lb-bg"><div id="loading-bar"></div></div>
+  </div>
+</div>
+
+<!-- Header -->
+<header>
+  <div class="header-content">
+    <a class="header-logo" href="https://www.trpa.gov/" aria-label="Tahoe Regional Planning Agency">
+      <img src="assets/trpa-logo-color.png" alt="TRPA" />
+    </a>
+    <div class="header-text">
+      <h1>Allocation Tracking</h1>
+      <div class="header-sub" id="header-sub">Basin overview by commodity and per-jurisdiction pool balances for residential, commercial, and tourist allocations.</div>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge">Live Data</div>
+      <div class="asof-badge">As of 2025</div>
+    </div>
+  </div>
+</header>
+
+<!-- Two views in one dashboard. Tab 1 = basin-level commodity tiles from
+     layer 10. Tab 2 = per-jurisdiction pool balances from layer 12 (folded
+     in from the retired pool-balance-cards.html, 2026-05-18). Pool Balances
+     content lazy-initializes the first time its tab is clicked so the
+     Plotly + metering fetches don't slow down the initial paint. -->
+<div class="tab-nav-band">
+  <div class="tab-nav">
+    <button class="tab-btn active" data-tab="overview" onclick="switchTab('overview', this)">Basin overview by commodity</button>
+    <button class="tab-btn"        data-tab="pools"    onclick="switchTab('pools', this)">Pool balances by jurisdiction</button>
+  </div>
+</div>
+
+<!-- TAB 1: Basin overview - layer 10 Grand Total snapshot rendered as
+     stacked-bar tiles per commodity. -->
+<div class="tab-panel active" id="tab-overview">
+  <div class="section">
+    <div id="commodity-donuts" class="donut-grid"></div>
+  </div>
+</div>
+
+<!-- TAB 2: Pool balances by jurisdiction - folded in from the former
+     pool-balance-cards.html. Commodity toggle + sorted card grid + click-to-
+     drilldown detail panel + commodity-aware explainer. All JS lives inside
+     the PoolBalancesTab IIFE at the bottom of the page. -->
+<div class="tab-panel" id="tab-pools">
+
+  <!-- KPI strip: Regional Plan max / assigned / not assigned / unreleased
+       for the selected commodity. Unreleased only carries values for RES
+       (770) and CFA (200,000) - TAU and RBU show 0 since the Regional Plan
+       didn't authorize an unreleased reserve for those commodities. -->
+  <div class="kpi-row">
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--trpa-navy)"></div>
+      <div class="kpi-label">Regional Plan maximum</div>
+      <div class="kpi-value" id="pbc-kpi-max">-</div>
+      <div class="kpi-sub" id="pbc-kpi-max-sub">total authorized capacity</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--trpa-forest)"></div>
+      <div class="kpi-label">Assigned to projects</div>
+      <div class="kpi-value" id="pbc-kpi-used">-</div>
+      <div class="kpi-sub" id="pbc-kpi-used-sub">drawn to a parcel</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--trpa-blue)"></div>
+      <div class="kpi-label">Not assigned</div>
+      <div class="kpi-value" id="pbc-kpi-rem">-</div>
+      <div class="kpi-sub" id="pbc-kpi-rem-sub">still available in pools</div>
+    </div>
+    <div class="kpi-card kpi-card-unreleased">
+      <div class="kpi-accent" style="background:var(--trpa-orange)"></div>
+      <div class="kpi-label">Unreleased</div>
+      <div class="kpi-value" id="pbc-kpi-unreleased">-</div>
+      <div class="kpi-sub" id="pbc-kpi-unreleased-sub">held centrally, not yet released</div>
+    </div>
+  </div>
+
+  <!-- Commodity toggle + sort indicator. Each button hosts a "?" info icon
+       that hovers to the matching markdown explainer (loaded by the IIFE
+       and stamped into the popovers via updateExplainer()). -->
+  <div class="toolbar">
+    <span class="tb-label">Commodity</span>
+    <button class="tb-btn comm-btn active" data-comm="residential">Residential Allocations<span class="btn-info" aria-label="What is a residential allocation?"><span class="btn-info-icon">?</span><div class="btn-info-popover" id="pbc-info-residential"><p><em>Loading explainer&hellip;</em></p></div></span></button>
+    <button class="tb-btn comm-btn"        data-comm="residential_bonus_units">Residential Bonus Units<span class="btn-info" aria-label="What is a residential bonus unit?"><span class="btn-info-icon">?</span><div class="btn-info-popover" id="pbc-info-residential_bonus_units"><p><em>Loading explainer&hellip;</em></p></div></span></button>
+    <button class="tb-btn comm-btn"        data-comm="commercial_floor_area">Commercial Floor Area<span class="btn-info" aria-label="What is commercial floor area?"><span class="btn-info-icon">?</span><div class="btn-info-popover" id="pbc-info-commercial_floor_area"><p><em>Loading explainer&hellip;</em></p></div></span></button>
+    <button class="tb-btn comm-btn"        data-comm="tourist_accommodation_units">Tourist Bonus Units<span class="btn-info" aria-label="What is a tourist accommodation unit?"><span class="btn-info-icon">?</span><div class="btn-info-popover" id="pbc-info-tourist_accommodation_units"><p><em>Loading explainer&hellip;</em></p></div></span></button>
+    <span class="tb-divider"></span>
+    <span class="sort-count" id="pbc-sort-count">- pools, sorted by % used</span>
+  </div>
+
+  <!-- Cards grid + click-to-drill detail panel -->
+  <div class="section">
+    <div class="cards-grid" id="pbc-cards-grid"></div>
+
+    <div class="detail-panel" id="pbc-detail-panel" style="display:none;">
+      <h3 id="pbc-detail-title">Pool detail</h3>
+      <div class="sub" id="pbc-detail-sub">Click a card above for detail.</div>
+      <div id="pbc-detail-chart" style="height:340px;"></div>
+      <div class="detail-empty" id="pbc-detail-empty" style="display:none;">No pool selected.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Related views: cross-link strip -->
+<div class="related-dashboards">
+  <strong>Related views:</strong>
+  <a href="tahoe-development-tracker.html">&larr; Tahoe Development Snapshot (executive overview)</a>
+  <a href="residential-additions-by-source.html">&rarr; Residential Additions by Source</a>
+  <a href="index.html">All dashboards</a>
+</div>
+
+<!-- Footnote: link text is the layer / table NAME (not "layer N"), so the
+     hrefs can be swapped to tahoeopendata.org download links later without
+     also re-writing the visible copy. -->
+<div class="footnote">
+  <strong>Source:</strong> Tahoe Regional Planning Agency. Data as of <span id="balances-as-of">&hellip;</span>.<br>Banked development is tracked separately; see the <a href="tahoe-development-tracker.html">Tahoe Development Snapshot</a>.
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// TRPA brand color tokens (mirror CSS vars)
+// ─────────────────────────────────────────
+const TRPA = {
+  blue:   '#0072CE',
+  navy:   '#003B71',
+  earth:  '#B47E00',
+  forest: '#4A6118',
+  brick:  '#9C3E27',
+  olive:  '#B5A64C',
+  orange: '#E87722',
+  purple: '#7B6A8A',
+  ice:    '#B4CBE8',
+  border: '#e1e7ee',
+  textDark: '#003B71',
+  textMid:  '#5d6c7e',
+  textLight:'#8a9bb2',
+};
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+// (Deep Dive globals - currentType / resData / cfaTauAllData / rawData /
+// activePills / sliderYear - removed 2026-05-18 with the Deep Dive tab.)
+let balancesData  = {};   // CommodityCode -> Layer 10 Grand Total row (drives Overview tiles)
+let balancesAsOf  = '';   // analyst's as-of date for the Overview snapshot
+
+// ─────────────────────────────────────────
+// CONSTANTS - Regional Plan caps per the analyst's 2026 PPTX slide 8
+// ─────────────────────────────────────────
+// Residential: 2,600 = 2012 Plan additional Board authorization (of 8,687 since-1987 cumulative max)
+// Commercial:  1,000,000 sq ft = since-1987 cumulative CFA max
+// Tourist:     400 = since-1987 cumulative TBU max
+// RBU:         2,000 = 1987 Regional Plan Residential Bonus Unit cap
+// (TOTAL_AUTH + TYPE_UNIT constants removed 2026-05-18 - they were only
+// used by the Deep Dive Sankey + per-jurisdiction bar; the Overview tiles
+// pull their values directly from layer 10's TotalAuthorized field.)
+
+// Sub-text under the Total card per commodity. Concise (1987 + 2012 RP combined).
+const TYPE_DESC = {
+  residential: '6,087 (1987 RP) + 2,600 (2012 RP)',
+  commercial:  '800,000 sq ft (1987 RP) + 200,000 sq ft (2012 RP)',
+  tourist:     '400 (1987 RP); no additional in 2012 RP',
+  rbu:         '1,400 (1987 RP) + 600 (2012 RP)',
+};
+
+// Locked commodity colors - mirror the CSS .donut-tile[data-commodity="X"]
+// rules so JS code that needs the commodity color can use this dict (no
+// current consumers; kept as the canonical reference for future use).
+const COMMODITY_COLOR = {
+  residential: TRPA.forest,
+  rbu:         TRPA.olive,
+  commercial:  TRPA.earth,
+  tourist:     TRPA.purple,
+};
+
+// Overview cards: live from Cumulative_Accounting layer 10 (Development Right
+// Allocation Balances) filtered to Source='Grand Total' so the 4 commodity
+// rows reflect the since-1987 totals as published by the analyst's snapshot.
+// Layer 10 is the analyst's xlsx normalized into 12 rows (Grand Total +
+// 1987 RP + 2012 RP, each x 4 commodities).
+const BALANCES_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/10/query'
+  + '?where=' + encodeURIComponent("Source='Grand Total'")
+  + '&outFields=*&returnGeometry=false&f=json';
+
+
+
+
+function fmtValFor(n, commodity) {
+  return n.toLocaleString() + (commodity === 'commercial' ? ' sq ft' : '');
+}
+
+
+
+const COMMODITIES = [
+  { key: 'residential', label: 'Residential allocations' },
+  { key: 'rbu',         label: 'Residential bonus units' },
+  { key: 'commercial',  label: 'Commercial floor area' },
+  { key: 'tourist',     label: 'Tourist accommodation' },
+];
+
+// Fetch the 4 Grand Total rows from layer 10. Each row carries the snapshot
+// totals (since-1987 cumulative): TotalAuthorized / AllocatedToPrivate /
+// JurisdictionPool / TRPAPool / Unreleased. The Overview cards render
+// directly from these; no client-side aggregation.
+async function fetchBalances() {
+  const r  = await fetch(BALANCES_URL, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('Balances layer 10: HTTP ' + r.status);
+  const js = await r.json();
+  balancesData = {};
+  for (const f of (js.features || [])) {
+    const a = f.attributes || {};
+    if (a.CommodityCode) balancesData[a.CommodityCode] = a;
+    if (a.AsOfDate)      balancesAsOf = a.AsOfDate;
+  }
+}
+
+// 4 commodity tiles sourced from layer 10 Grand Total (since-1987
+// cumulative). The snapshot is static - no filter chrome.
+// Per-commodity explainer markdown. Sourced from the pool-balance-cards
+// content folder so the analyst maintains a single canonical copy of "what
+// is this commodity?" content; we just render it into hover popovers here.
+// Keys match the local commodity keys (residential / rbu / commercial / tourist);
+// URLs point at the underlying file names (which use the longer SDE-style names).
+const EXPLAINER_URLS = {
+  residential: '../content/explainers/pool-balance-cards/residential.md',
+  rbu:         '../content/explainers/pool-balance-cards/residential_bonus_units.md',
+  commercial:  '../content/explainers/pool-balance-cards/commercial_floor_area.md',
+  tourist:     '../content/explainers/pool-balance-cards/tourist_accommodation_units.md',
+};
+// commodity key -> rendered HTML (filled in by loadExplainers; consumed by
+// renderCommodityRows when it stamps the popover content). Initialized to a
+// graceful placeholder so the popover is never empty even if the fetch races.
+let EXPLAINERS = Object.fromEntries(
+  Object.keys(EXPLAINER_URLS).map(k => [k, '<p><em>Loading explainer&hellip;</em></p>'])
+);
+
+async function loadExplainers() {
+  const entries = await Promise.all(
+    Object.entries(EXPLAINER_URLS).map(async ([key, url]) => {
+      try {
+        const r = await fetch(url, { cache: 'no-cache' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const md = await r.text();
+        return [key, marked.parse(md)];
+      } catch (e) {
+        console.warn('Explainer load failed for ' + key + ':', e.message);
+        return [key, '<p><em>Explainer unavailable (' + e.message + ').</em></p>'];
+      }
+    })
+  );
+  EXPLAINERS = Object.fromEntries(entries);
+}
+
+// Compact formatter for big hero numbers: 1,000,000 -> "1M", 1,500,000 -> "1.5M".
+// Below 1M we keep full comma format because "8,687" reads cleaner than "8.7K"
+// at the residential / RBU / TAU range. The legend keeps full precise values
+// since there's horizontal room there.
+function fmtCompact(n) {
+  if (n == null) return '0';
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return (m % 1 === 0 ? m.toFixed(0) : m.toFixed(1)) + 'M';
+  }
+  return n.toLocaleString();
+}
+
+function renderCommodityRows() {
+  // Option 1 variant v2 (stacked bar): each tile gets a hero cap number, a
+  // single horizontal stacked bar showing the 4-state breakdown
+  // (Allocated / Jurisdiction pool / TRPA pool / Unreleased), then a
+  // legend table. Unit (sq ft / units) lives in the hero sublabel so the
+  // hero number stays tight ("1M" not "1,000,000 sq ft").
+  const grid = document.querySelector('#commodity-donuts');
+  if (!grid) return;
+  grid.innerHTML = COMMODITIES.map(c =>
+    '<div class="donut-tile" data-commodity="' + c.key + '">'
+    +   '<div class="donut-tile-name">' + c.label
+    +     '<span class="tile-info" aria-label="What is ' + c.label + '?">'
+    +       '<span class="tile-info-icon">?</span>'
+    +     '</span>'
+    +   '</div>'
+    +   '<div class="donut-tile-desc">' + TYPE_DESC[c.key] + '</div>'
+    +   '<div class="tile-hero">'
+    +     '<div class="tile-hero-value" id="tile-' + c.key + '-cap">&hellip;</div>'
+    +     '<div class="tile-hero-label" id="tile-' + c.key + '-caplabel">&hellip;</div>'
+    +   '</div>'
+    +   '<div class="tile-stack" id="tile-' + c.key + '-stack"></div>'
+    +   '<div class="tile-legend" id="tile-' + c.key + '-legend"></div>'
+    // Popover is a DIRECT child of .donut-tile (not inside .tile-info)
+    // so its absolute positioning is relative to the whole tile - it
+    // appears BELOW the card, floating on top of the page, instead of
+    // squeezed inside the card body near the "?" icon.
+    +   '<div class="tile-info-popover" id="tile-' + c.key + '-popover">'
+    +     (EXPLAINERS[c.key] || '<p><em>Loading explainer&hellip;</em></p>')
+    +   '</div>'
+    + '</div>'
+  ).join('');
+
+  COMMODITIES.forEach(c => renderCommodityStack(c));
+}
+
+// Called after loadExplainers resolves: swap each tile's popover content
+// from "Loading..." to the rendered markdown. Lets the markdown fetch be
+// non-blocking on initial render (tiles paint immediately with the data
+// fetches; popovers backfill when their content arrives).
+function updateExplainers() {
+  COMMODITIES.forEach(c => {
+    const el = document.getElementById('tile-' + c.key + '-popover');
+    if (el && EXPLAINERS[c.key]) el.innerHTML = EXPLAINERS[c.key];
+  });
+}
+
+function renderCommodityStack(c) {
+  const code = c.key === 'residential' ? 'RES'
+             : c.key === 'commercial'  ? 'CFA'
+             : c.key === 'tourist'     ? 'TAU'
+             : c.key === 'rbu'         ? 'RBU' : null;
+  const row = balancesData[code] || {};
+  const unit = c.key === 'commercial' ? 'sq ft' : 'units';
+
+  // Build segments. Unreleased only appears if > 0 (RBU + TAU have 0).
+  // Status palette: locked across dashboards. Allocated = forest (matches
+  // the "used" bar on pool-balance-cards), Jurisdiction = blue, TRPA = ice,
+  // Unreleased = orange. Independent of commodity color so residential
+  // (forest commodity) doesn't blur with the Allocated segment.
+  const segments = [
+    { name: 'Allocated to private development', value: row.AllocatedToPrivate || 0, color: TRPA.forest },
+    { name: 'Jurisdiction pool',    value: row.JurisdictionPool   || 0, color: TRPA.blue   },
+    { name: 'TRPA pool',            value: row.TRPAPool           || 0, color: TRPA.ice    },
+  ];
+  if ((row.Unreleased || 0) > 0) {
+    segments.push({ name: 'Unreleased', value: row.Unreleased, color: TRPA.orange });
+  }
+  const cap = row.TotalAuthorized || 0;
+  const segTotal = segments.reduce((s, x) => s + x.value, 0);
+
+  // Hero: compact cap number + sublabel with unit
+  document.getElementById('tile-' + c.key + '-cap').textContent = fmtCompact(cap);
+  document.getElementById('tile-' + c.key + '-caplabel').innerHTML =
+    '<strong>' + unit + '</strong> total since-1987 authorized';
+
+  // Stacked bar: one segment per state, flex value = raw count so widths
+  // are proportional automatically. Segments are clean colored blocks -
+  // inline number labels were removed 2026-05-18 since the hover tooltip
+  // and the typed-out legend below already carry the same numbers (the
+  // bar was triple-counting itself).
+  document.getElementById('tile-' + c.key + '-stack').innerHTML = segments.map(s => {
+    const pct = segTotal ? (s.value / segTotal) * 100 : 0;
+    // data-tooltip drives the styled CSS hover tooltip (.tile-stack-segment::after).
+    // Format: "<segment name>: <value> <unit> (<pct>%)" so the name reads first,
+    // since that's what the user is hovering to identify.
+    const tip = s.name + ': ' + s.value.toLocaleString() + ' ' + unit + ' (' + pct.toFixed(1) + '%)';
+    return '<div class="tile-stack-segment" style="flex:' + s.value
+      + ';background:' + s.color + '"'
+      + ' data-tooltip="' + tip + '"></div>';
+  }).join('');
+
+  // Legend: 3-column grid (name+swatch | value | %)
+  document.getElementById('tile-' + c.key + '-legend').innerHTML = segments.map(s => {
+    const pct = segTotal ? (s.value / segTotal) * 100 : 0;
+    return '<div class="tile-legend-name">'
+      +   '<div class="swatch" style="background:' + s.color + '"></div>'
+      +   s.name
+      + '</div>'
+      + '<div class="tile-legend-value">' + s.value.toLocaleString() + '</div>'
+      + '<div class="tile-legend-pct">' + pct.toFixed(0) + '%</div>';
+  }).join('');
+}
+
+
+// ─────────────────────────────────────────
+// TAB SWITCHER
+// ─────────────────────────────────────────
+// Lazy-init: tab 2 (Pool Balances) only fetches its data the first time the
+// user clicks the tab. Saves ~2-3 REST calls on initial paint if the user
+// stays in the overview tab.
+let _pbcInitDone = false;
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+  if (name === 'pools' && !_pbcInitDone) {
+    _pbcInitDone = true;
+    if (typeof window.initPoolBalances === 'function') window.initPoolBalances();
+  }
+}
+
+// ─────────────────────────────────────────
+// INIT (tab 1: Basin overview)
+// ─────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const bar = document.querySelector('#loading-bar');
+  try {
+    if (bar) bar.style.width = '30%';
+    await fetchBalances();    // live: layer 10 Grand Total snapshot (drives the commodity tiles)
+    if (bar) bar.style.width = '100%';
+  } catch (e) {
+    document.querySelector('#loading-overlay').innerHTML =
+      '<div style="background:#fff;border-radius:10px;padding:32px 48px;text-align:center;font-family:\'Open Sans\',sans-serif;">' +
+      '<strong style="color:' + TRPA.orange + ';font-size:1rem;">Error loading data</strong><br>' +
+      '<small style="color:' + TRPA.textMid + ';">' + e.message + '</small></div>';
+    return;
+  }
+  document.querySelector('#loading-overlay').style.display = 'none';
+  renderCommodityRows();
+  const asOfEl = document.querySelector('#balances-as-of');
+  if (asOfEl && balancesAsOf) asOfEl.textContent = balancesAsOf;
+
+  // Markdown explainers load in the background (non-blocking) and backfill
+  // each tile's popover content when ready. Tiles paint immediately with
+  // "Loading explainer..." until this resolves; a failed fetch leaves a
+  // graceful "Explainer unavailable" message in place.
+  loadExplainers().then(updateExplainers);
+});
+</script>
+
+<!-- ──────────────────────────────────────────────────────────────────────
+     TAB 2: POOL BALANCES (folded in from the former pool-balance-cards.html)
+     ──────────────────────────────────────────────────────────────────────
+     All code wrapped in an IIFE so PBC's globals (commodity, POOL_BALANCES,
+     METERING, EXPLAINER_URLS, etc.) don't collide with the AT tab's
+     equivalents. Only window.initPoolBalances is exposed - called by
+     switchTab() the first time the Pools tab is activated. ────────────── -->
+<script>
+(function PoolBalancesTab() {
+  // Layer 12 = per-commodity-per-pool balances; layer 13 = residential
+  // per-year metering. PBC's original sources, unchanged.
+  const POOL_BALANCES_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/12/query'
+    + '?where=1%3D1'
+    + '&outFields=CommodityCode%2CPool%2CGroup_%2CRegionalPlanMaximum%2CAssignedToProjects%2CNotAssigned%2CAsOfDate'
+    + '&orderByFields=CommodityCode%2CPool'
+    + '&returnGeometry=false&f=json';
+  const METERING_URL = 'https://maps.trpa.org/server/rest/services/Cumulative_Accounting/MapServer/13/query'
+    + '?where=1%3D1'
+    + '&outFields=Commodity%2CCommodityCode%2CPool%2CYear%2CDirection%2CUnits'
+    + '&orderByFields=Pool%2CDirection%2CYear'
+    + '&returnGeometry=false&f=json';
+  const plotFont = { family: '"Open Sans", system-ui, sans-serif', color: TRPA.navy, size: 12 };
+  const HOVERLABEL = { bgcolor: '#ffffff', bordercolor: TRPA.ice, font: { color: TRPA.navy, family: '"Open Sans"', size: 12 } };
+  const PLOT_CFG = { responsive: true, displayModeBar: false };
+  const CARD_PALETTE = [TRPA.blue, TRPA.navy, TRPA.orange, TRPA.forest, TRPA.earth, TRPA.purple, TRPA.olive, TRPA.brick];
+
+  let METERING       = {};
+  let POOL_BALANCES  = {};
+  let commodity      = 'residential';
+  let selectedName   = null;
+
+  const COMM_META = {
+    residential:                 { label: 'Residential Allocations',  unit: 'units', code: 'RES' },
+    residential_bonus_units:     { label: 'Residential Bonus Units',  unit: 'units', code: 'RBU' },
+    commercial_floor_area:       { label: 'Commercial Floor Area',    unit: 'sq ft', code: 'CFA' },
+    tourist_accommodation_units: { label: 'Tourist Bonus Units',      unit: 'units', code: 'TAU' },
+  };
+
+  async function loadPoolBalances() {
+    const r = await fetch(POOL_BALANCES_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('pool balances: HTTP ' + r.status);
+    const js = await r.json();
+    const rawRows = Array.isArray(js.rows)     ? js.rows
+                  : Array.isArray(js.features) ? js.features.map(f => f.attributes)
+                  : [];
+    if (!rawRows.length) throw new Error('no rows in pool balances payload');
+    const rows = rawRows.map(r => ({
+      ...r,
+      Group: r.Group != null ? r.Group : r.Group_,
+      Plan:  r.Plan  != null ? r.Plan  : r.Plan_,
+    }));
+    POOL_BALANCES = {};
+    for (const row of rows) {
+      const code = row.CommodityCode;
+      if (!code) continue;
+      if (!POOL_BALANCES[code]) POOL_BALANCES[code] = [];
+      POOL_BALANCES[code].push(row);
+    }
+  }
+
+  function pbcFmt(n) { return n == null ? '0' : Math.round(n).toLocaleString(); }
+
+  function getCards() {
+    const code = COMM_META[commodity].code;
+    const src  = POOL_BALANCES[code] || [];
+    const rows = src.map(r => ({
+      name:      r.Pool,
+      initial:   r.RegionalPlanMaximum || 0,
+      used:      r.AssignedToProjects  || 0,
+      remaining: r.NotAssigned         || 0,
+      group:     r.Group || '',
+    }));
+    rows.forEach((r, i) => { r.color = CARD_PALETTE[i % CARD_PALETTE.length]; });
+    return rows;
+  }
+
+  // Layer 12 carries a Group_='Unreleased' row for RES (770) and CFA
+  // (200,000); other commodities have no unreleased reserve, so this
+  // returns 0. The Unreleased KPI uses this; the Not-assigned KPI keeps
+  // its existing math (which already includes unreleased in NotAssigned).
+  function getUnreleasedTotal() {
+    const code = COMM_META[commodity].code;
+    const src  = POOL_BALANCES[code] || [];
+    return src
+      .filter(r => (r.Group || '').toLowerCase() === 'unreleased')
+      .reduce((s, r) => s + (r.NotAssigned || 0), 0);
+  }
+
+  function getAllCard() {
+    const rows = getCards();
+    const sum = (k) => rows.reduce((a, r) => a + (r[k] || 0), 0);
+    return {
+      name:      'All Jurisdictions',
+      group:     COMM_META[commodity].label,
+      initial:   sum('initial'),
+      remaining: sum('remaining'),
+      used:      sum('used'),
+      color:     TRPA.navy,
+      _all:      true,
+    };
+  }
+
+  function getSummary() {
+    const cards = getCards();
+    return {
+      regional_plan_maximum: cards.reduce((s, c) => s + (c.initial   || 0), 0),
+      assigned_to_projects:  cards.reduce((s, c) => s + (c.used      || 0), 0),
+      not_assigned:          cards.reduce((s, c) => s + (c.remaining || 0), 0),
+    };
+  }
+
+  async function loadMetering() {
+    const r = await fetch(METERING_URL, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('metering: HTTP ' + r.status);
+    const js = await r.json();
+    const rows = Array.isArray(js.rows)     ? js.rows
+               : Array.isArray(js.features) ? js.features.map(f => f.attributes)
+               : [];
+    METERING = {};
+    for (const row of rows) {
+      const pool = row.Pool, dir = row.Direction;
+      if (!METERING[pool]) METERING[pool] = {};
+      if (!METERING[pool][dir]) METERING[pool][dir] = { years: [], values: [] };
+      METERING[pool][dir].years.push(row.Year);
+      METERING[pool][dir].values.push(row.Units);
+    }
+  }
+
+  function hasMetering(name) {
+    return commodity === 'residential' && !!(METERING[name]?.Released && METERING[name]?.Assigned);
+  }
+
+  function updateKPIs() {
+    const s = getSummary();
+    const unit = COMM_META[commodity].unit;
+    const unreleased = getUnreleasedTotal();
+    // Toggle the 4th card in/out based on whether the active commodity has
+    // an unreleased reserve. RES + CFA do (770 / 200,000); RBU + TAU don't.
+    // CSS swaps the grid columns 3 <-> 4 on the same toggle so the row
+    // stays evenly distributed.
+    const kpiRow = document.querySelector('#tab-pools .kpi-row');
+    if (kpiRow) kpiRow.classList.toggle('has-unreleased', unreleased > 0);
+
+    document.querySelector('#pbc-kpi-max').textContent  = pbcFmt(s.regional_plan_maximum);
+    document.querySelector('#pbc-kpi-used').textContent = pbcFmt(s.assigned_to_projects);
+    document.querySelector('#pbc-kpi-rem').textContent  = pbcFmt(s.not_assigned);
+    document.querySelector('#pbc-kpi-unreleased').textContent = pbcFmt(unreleased);
+    document.querySelector('#pbc-kpi-unreleased-sub').textContent = unit + ' held centrally, not yet released';
+    document.querySelector('#pbc-kpi-max-sub').textContent  = unit + ' of authorized capacity';
+    document.querySelector('#pbc-kpi-used-sub').textContent = unit + ' drawn to a parcel';
+    document.querySelector('#pbc-kpi-rem-sub').textContent  = unit + ' still available in pools';
+  }
+
+  function renderCards() {
+    const cards = getCards();
+    updateKPIs();
+    const allCard = getAllCard();
+    const sorted = [allCard, ...[...cards].sort((a, b) => {
+      const pa = a.initial ? (a.used / a.initial) : 0;
+      const pb = b.initial ? (b.used / b.initial) : 0;
+      return pb - pa;
+    })];
+    const grid = document.querySelector('#pbc-cards-grid');
+    grid.innerHTML = '';
+    const unit = COMM_META[commodity].unit;
+    sorted.forEach(p => {
+      const pctUsed = p.initial ? (p.used / p.initial) * 100 : 0;
+      const card = document.createElement('div');
+      card.className = 'pool-card'
+        + (selectedName === p.name ? ' selected' : '')
+        + (p._all ? ' pool-card-all' : '');
+      card.onclick = () => selectCard(p);
+      card.innerHTML =
+        '<div class="pool-accent" style="background:' + p.color + '"></div>' +
+        '<div class="pool-jurisdiction">' + (p._all ? 'Combined' : (p.group || COMM_META[commodity].label + ' pool')) + '</div>' +
+        '<div class="pool-name">' + p.name + '</div>' +
+        '<div class="pool-row">' +
+          '<div class="pool-remaining">' + pbcFmt(p.remaining) + '</div>' +
+          '<div class="pool-of">not assigned<br>of <strong>' + pbcFmt(p.initial) + '</strong> ' + unit + '</div>' +
+        '</div>' +
+        '<div class="pool-bar-track">' +
+          '<div class="pool-bar-fill" style="width:' + pctUsed.toFixed(1) + '%;background:' + p.color + '"></div>' +
+        '</div>' +
+        '<div class="pool-stats">' +
+          '<span class="pool-pct-used">' + pctUsed.toFixed(1) + '% used</span>' +
+          '<span class="pool-pct-rem">' + pbcFmt(p.used) + ' assigned</span>' +
+        '</div>';
+      grid.appendChild(card);
+    });
+    document.querySelector('#pbc-sort-count').innerHTML =
+      '<strong>' + cards.length + '</strong> ' + COMM_META[commodity].label + ' pool' + (cards.length === 1 ? '' : 's') + ', sorted by % used (plus All Jurisdictions)';
+  }
+
+  function selectCard(p) {
+    selectedName = p.name;
+    renderCards();
+    document.querySelector('#pbc-detail-panel').style.display = 'block';
+    document.querySelector('#pbc-detail-empty').style.display = 'none';
+    document.querySelector('#pbc-detail-title').textContent = p.name;
+    const unit = COMM_META[commodity].unit;
+    const pctUsed = p.initial ? (p.used / p.initial * 100) : 0;
+    if (p._all) {
+      document.querySelector('#pbc-detail-sub').innerHTML =
+        'Combined across all ' + COMM_META[commodity].label + ' pools. ' +
+        '<strong>' + pbcFmt(p.used) + '</strong> assigned to projects &middot; ' +
+        '<strong>' + pbcFmt(p.remaining) + '</strong> not assigned of ' +
+        '<strong>' + pbcFmt(p.initial) + '</strong> ' + unit + '.';
+      renderAll(unit);
+      return;
+    }
+    if (hasMetering(p.name)) {
+      document.querySelector('#pbc-detail-sub').innerHTML =
+        'Allocations <strong>released</strong> to this pool each year vs <strong>assigned</strong> to projects. ' +
+        'Allocations are metered out over time - not granted all at once. ' +
+        pbcFmt(p.used) + ' assigned &middot; ' + pbcFmt(p.remaining) + ' not assigned of ' + pbcFmt(p.initial) + ' ' + unit + '.';
+      renderMetering(p.name);
+    } else {
+      document.querySelector('#pbc-detail-sub').innerHTML =
+        pbcFmt(p.used) + ' assigned to projects &middot; ' + pbcFmt(p.remaining) + ' not assigned ' +
+        '&middot; ' + pctUsed.toFixed(1) + '% of the ' + pbcFmt(p.initial) + ' ' + unit + ' maximum used.' +
+        (commodity === 'residential' ? ' Per-year metering is not tracked for this pool.' : '');
+      renderBreakdown(p, unit);
+    }
+  }
+
+  function renderMetering(name) {
+    const m        = METERING[name] || {};
+    const years    = (m.Released || m.Assigned)?.years || [];
+    const released = m.Released?.values || [];
+    const assigned = m.Assigned?.values || [];
+    Plotly.react('pbc-detail-chart', [
+      { name: 'Released to the pool', type: 'bar', x: years, y: released, marker: { color: TRPA.forest }, hovertemplate: '<b>%{y:,}</b> released<extra>%{x}</extra>' },
+      { name: 'Assigned to projects', type: 'scatter', mode: 'lines+markers', x: years, y: assigned, line: { color: TRPA.orange, width: 2.5 }, marker: { color: TRPA.orange, size: 5, line: { color: '#fff', width: 1 } }, hovertemplate: '<b>%{y:,}</b> assigned<extra>%{x}</extra>' },
+    ], {
+      font: plotFont, paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 8, r: 16, b: 36, l: 52 }, hoverlabel: HOVERLABEL,
+      xaxis: { title: { text: 'Year', font: { size: 11 } }, gridcolor: '#e8edf4', linecolor: TRPA.ice, tickfont: { size: 10 } },
+      yaxis: { title: { text: 'Allocations', font: { size: 11 } }, rangemode: 'tozero', gridcolor: '#e8edf4', linecolor: TRPA.ice, tickfont: { size: 10 } },
+      legend: { orientation: 'h', y: -0.2, font: { size: 11 } }, hovermode: 'x unified',
+    }, PLOT_CFG);
+  }
+
+  function renderAll(unit) {
+    const rows = [...getCards()].sort((a, b) => {
+      const pa = a.initial ? (a.used / a.initial) : 0;
+      const pb = b.initial ? (b.used / b.initial) : 0;
+      return pb - pa;
+    });
+    const names    = rows.map(r => r.name);
+    const used     = rows.map(r => r.used);
+    const notAssig = rows.map(r => r.remaining);
+    Plotly.react('pbc-detail-chart', [
+      { name: 'Assigned to projects', type: 'bar', orientation: 'h', x: used,     y: names, marker: { color: TRPA.forest }, hovertemplate: '<b>%{x:,}</b> ' + unit + '<extra>Assigned to projects</extra>' },
+      { name: 'Not assigned',         type: 'bar', orientation: 'h', x: notAssig, y: names, marker: { color: TRPA.ice    }, hovertemplate: '<b>%{x:,}</b> ' + unit + '<extra>Not assigned</extra>' },
+    ], {
+      barmode: 'stack', font: plotFont,
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 8, r: 24, b: 36, l: 200 }, hovermode: 'y unified', hoverlabel: HOVERLABEL,
+      xaxis: { gridcolor: '#e8edf4', linecolor: TRPA.ice, tickfont: { size: 10 }, rangemode: 'tozero' },
+      yaxis: { autorange: 'reversed', tickfont: { size: 10 }, automargin: true },
+      legend: { orientation: 'h', y: -0.18, font: { size: 11 } },
+    }, PLOT_CFG);
+  }
+
+  function renderBreakdown(p, unit) {
+    Plotly.react('pbc-detail-chart', [
+      { name: 'Assigned to projects', type: 'bar', orientation: 'h', x: [p.used],      y: [p.name], marker: { color: TRPA.forest }, hovertemplate: '<b>%{x:,}</b> ' + unit + '<extra>Assigned to projects</extra>' },
+      { name: 'Not assigned',         type: 'bar', orientation: 'h', x: [p.remaining], y: [p.name], marker: { color: TRPA.ice    }, hovertemplate: '<b>%{x:,}</b> ' + unit + '<extra>Not assigned</extra>' },
+    ], {
+      barmode: 'stack', font: plotFont,
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { t: 40, r: 16, b: 36, l: 16 }, hovermode: 'y unified', hoverlabel: HOVERLABEL,
+      xaxis: { gridcolor: '#e8edf4', linecolor: TRPA.ice, tickfont: { size: 10 }, rangemode: 'tozero' },
+      yaxis: { visible: false },
+      legend: { orientation: 'h', y: 1.3, font: { size: 11 } },
+    }, PLOT_CFG);
+  }
+
+  // Commodity-aware explainer panel. Loads the same markdown files used by
+  // the AT tab's tile-info popovers. Cached in this IIFE so flipping
+  // commodities is instant after the initial fetch.
+  const PBC_EXPLAINER_URLS = {
+    residential:                 '../content/explainers/pool-balance-cards/residential.md',
+    residential_bonus_units:     '../content/explainers/pool-balance-cards/residential_bonus_units.md',
+    commercial_floor_area:       '../content/explainers/pool-balance-cards/commercial_floor_area.md',
+    tourist_accommodation_units: '../content/explainers/pool-balance-cards/tourist_accommodation_units.md',
+  };
+  let PBC_EXPLAINERS = {};
+
+  async function loadPbcExplainers() {
+    const entries = await Promise.all(
+      Object.entries(PBC_EXPLAINER_URLS).map(async ([key, url]) => {
+        try {
+          const r = await fetch(url, { cache: 'no-cache' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return [key, marked.parse(await r.text())];
+        } catch (e) {
+          return [key, '<p><em>Explainer unavailable (' + e.message + ').</em></p>'];
+        }
+      })
+    );
+    PBC_EXPLAINERS = Object.fromEntries(entries);
+  }
+
+  // Stamp the loaded markdown into each commodity button's popover. Called
+  // once after loadPbcExplainers() resolves; static thereafter (no need to
+  // re-stamp on commodity change since each popover stays bound to its
+  // matching commodity key, not the active toggle).
+  function updateExplainer() {
+    Object.entries(PBC_EXPLAINERS).forEach(([key, html]) => {
+      const el = document.querySelector('#pbc-info-' + key);
+      if (el && html) el.innerHTML = html;
+    });
+  }
+
+  function setCommodity(key) {
+    commodity = key;
+    selectedName = null;
+    document.querySelectorAll('#tab-pools .comm-btn').forEach(b => b.classList.toggle('active', b.dataset.comm === key));
+    document.querySelector('#pbc-detail-panel').style.display = 'none';
+    renderCards();
+    selectCard(getAllCard());
+  }
+
+  // Exposed to switchTab() in the outer script.
+  window.initPoolBalances = async function () {
+    try {
+      await Promise.all([loadPoolBalances(), loadMetering(), loadPbcExplainers()]);
+    } catch (e) {
+      document.querySelector('#pbc-cards-grid').innerHTML =
+        '<div style="padding:30px;color:' + TRPA.brick + ';">Data unavailable (' + e.message + ')</div>';
+      return;
+    }
+    document.querySelectorAll('#tab-pools .comm-btn').forEach(b =>
+      b.addEventListener('click', () => setCommodity(b.dataset.comm)));
+    renderCards();
+    updateExplainer();
+    selectCard(getAllCard());
+  };
+})();
+</script>
+
+<footer>
+  &copy; 2026 Tahoe Regional Planning Agency &middot;
+  <a href="https://www.trpa.gov/">trpa.gov</a> &middot;
+  <a href="mailto:info@trpa.gov?subject=Dashboard%20feedback">Feedback</a>
+</footer>
+</body>
+</html>
