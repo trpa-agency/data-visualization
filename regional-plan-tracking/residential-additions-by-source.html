@@ -213,7 +213,7 @@ footer a:hover { text-decoration: underline; }
   </div>
   <div class="kpi-card">
     <div class="kpi-accent" style="background:var(--trpa-blue)"></div>
-    <div class="kpi-label">Largest source overall</div>
+    <div class="kpi-label">Largest source overall 2013-2025</div>
     <div class="kpi-value" id="kpi-largest">&hellip;</div>
     <div class="kpi-sub"  id="kpi-largest-sub">&hellip;</div>
   </div>
@@ -242,8 +242,8 @@ footer a:hover { text-decoration: underline; }
   <div class="split">
     <div class="left-stack">
       <div class="card">
-        <h3>Composition of completed residential units by source</h3>
-        <p>Gross completed units only; removals (banked or converted) are charted below.</p>
+        <h3>Residential units added by year</h3>
+        <p>Gross completed units only; removals (banked or converted) are shown below. 2013-2025 totals: 887 allocations + 222 bonus units + 138 transfers + 161 from conversions + 171 from banked = 1,579 units added</p>
         <div id="main-chart" style="height:480px;"></div>
         <!-- Legend at the bottom of the card: per-source colored chips with
              hover-revealed plain-language definitions. Replaces the older
@@ -258,7 +258,7 @@ footer a:hover { text-decoration: underline; }
       </div>
       <div class="card">
         <h3>Residential units removed by year</h3>
-        <p>To Bank (left) and To Conversion (right) as side-by-side area facets. Both series are negative; shared y-axis keeps the zero line aligned across panels. 2013-2025 totals: -103 To Bank + -7 To Conversion = -110 net removed.</p>
+        <p>Gross removed units. 2013-2025 totals: -103 To Bank + -7 To Conversion = -110 net removed.</p>
         <div id="removed-chart" style="height:240px;"></div>
         <!-- Legend at the bottom: same pattern as the Composition card above. -->
         <div class="chart-legend">
@@ -545,9 +545,9 @@ function hexA(hex, a) {
 // Analyst-authored definitions (2026-05-18) - kept verbatim so the
 // content stays editable in one place.
 const SOURCE_BRIEFS = {
-  allocations: 'Annually-released residential allocations assigned from a county, city, or TRPA pool and assigned to a parcel for new construction.',
+  allocations: 'Annually-released residential allocations assigned from a county, city, or TRPA pool and assigned to a parcel and constructed.',
   bonus:       'Bonus units awarded for deed-restricted affordable-income, moderate-income, achievable housing, multi-residential, or other incentives.',
-  transfers:   'Existing residential development rights transferred from one parcel to another.',
+  transfers:   'Residential units transferred from one parcel to another and constructed on the receiving parcel.',
   banked:      'Previously-existing and banked residential rights used to rebuild on a parcel.',
   conversions: 'Development rights converted into residential units and constructed on the same site or transferred to a different site.',
 };
