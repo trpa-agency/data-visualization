@@ -47,6 +47,89 @@ header { background: var(--trpa-navy); color: #fff; display: flex; align-items: 
 .header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
 .header-logo img { height: 58px; width: auto; display: block; }
 .header-text { flex: 1; min-width: 0; }
+.header-back {
+  flex-shrink: 0;
+  color: var(--trpa-ice);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-back:hover { color: #fff; text-decoration: underline; }
+
+/* Title-info popover - intro tooltip next to the dashboard's h1. Hover the
+   ice "?" circle to reveal a short "what does this dashboard show" card.
+   Same pattern as development_history.html. */
+.title-info { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 12px; }
+.title-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.85rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+}
+.title-info-icon:hover { background: #fff; color: var(--trpa-navy); }
+.title-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -4px;
+  width: 440px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 0.86rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.title-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.title-info-popover p { margin-bottom: 8px; }
+.title-info-popover p:last-child { margin-bottom: 0; }
+.title-info:hover .title-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+.title-info::after {
+  content: ''; position: absolute;
+  top: calc(100% + 4px); left: 4px;
+  border: 6px solid transparent; border-bottom-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  z-index: 101;
+}
+.title-info:hover::after { opacity: 1; }
+
+/* Intro banner - always-visible "about this dashboard" callout that sits
+   directly below the header. Replaces the hover-only title-info popover so
+   the framing is exposed by default rather than hidden behind a hover target
+   most visitors never discover. Navy-blue accent stripe on the left so it
+   reads as a discrete block. */
+.intro-banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 22px 32px 26px;
+}
+.intro-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  border-left: 3px solid var(--trpa-blue);
+  padding: 4px 0 4px 18px;
+}
+.intro-banner-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--trpa-blue);
+  margin-bottom: 8px;
+}
+.intro-banner p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--text-mid);
+  margin-bottom: 10px;
+}
+.intro-banner p:last-child { margin-bottom: 0; }
+.intro-banner p strong { color: var(--text-dark); font-weight: 600; }
+@media (max-width: 768px) {
+  .intro-banner { padding: 16px 18px; }
+}
+
 .header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
 .header-eyebrow a { color: var(--trpa-ice); }
 header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
@@ -171,19 +254,6 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
   line-height: 1.6; background: var(--surface); border-top: 1px solid var(--border); margin-top: 24px;
 }
 .footnote code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
-/* Related views cross-link strip - sits between main content + footnote.
-   Standard pattern across the dashboard ecosystem; previously this page
-   relied on in-section "For more information" links only, which left
-   "where do I go next?" partially answered. */
-.related-dashboards {
-  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
-  font-size: 0.82rem; color: var(--text-mid);
-  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-}
-.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
-.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
-.related-dashboards a:hover { text-decoration: underline; }
-
 @media (max-width: 700px) {
   header .header-content, .section, .footnote { padding-left: 16px; padding-right: 16px; }
 }
@@ -232,8 +302,17 @@ footer a:hover { text-decoration: underline; }
         Residential, tourist, and commercial development assigned to projects across the Tahoe Region.
       </div>
     </div>
+    <a class="header-back" href="index.html">&larr; Return to Main Menu</a>
   </div>
 </header>
+
+<aside class="intro-banner" aria-label="About this dashboard">
+  <div class="intro-banner-inner">
+    <div class="intro-banner-eyebrow">About this dashboard</div>
+    <p><strong>The Tahoe Development Snapshot provides an overview of development across the Tahoe Basin.</strong></p>
+    <p>Explore the current estimated totals for existing development by unit type, banked development, and the remaining additional development allowed under the Lake Tahoe Regional Plan, including reserved and unreserved/unreleased amounts.</p>
+  </div>
+</aside>
 
 <!-- Four basin-wide totals sections:
        i.   Existing development on the ground  (live from PDH layer 0)
@@ -328,14 +407,6 @@ footer a:hover { text-decoration: underline; }
 
 <div class="section conversion-note">
   <p><strong>Note:</strong> These existing and remaining balances and total development potential for each type of development will vary due to permitted conversions between development right categories.</p>
-</div>
-
-<div class="related-dashboards">
-  <strong>Related views:</strong>
-  <a href="allocation-tracking.html">&rarr; Allocation Tracking (per-commodity detail and pool balances)</a>
-  <a href="residential-additions-by-source.html">&rarr; Residential Additions by Source (where each year's units came from)</a>
-  <a href="development_history.html">&rarr; Development History (year-over-year trends)</a>
-  <a href="index.html">All dashboards</a>
 </div>
 
 <div class="footnote">

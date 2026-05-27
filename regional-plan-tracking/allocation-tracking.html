@@ -53,6 +53,90 @@ header { background: var(--trpa-navy); color: #fff; display: flex; align-items: 
 .header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
 .header-logo img { height: 58px; width: auto; display: block; }
 .header-text { flex: 1; min-width: 0; }
+.header-back {
+  flex-shrink: 0;
+  color: var(--trpa-ice);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-back:hover { color: #fff; text-decoration: underline; }
+
+/* Title-info popover - intro tooltip next to a view title. Used inline next
+   to each tab button on this dashboard (one popover per view) rather than on
+   the main h1, since each tab has its own intro story. */
+.title-info { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 12px; }
+.title-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.85rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+}
+.title-info-icon:hover { background: #fff; color: var(--trpa-navy); }
+.title-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -4px;
+  width: 440px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 0.86rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.title-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.title-info-popover p { margin-bottom: 8px; }
+.title-info-popover p:last-child { margin-bottom: 0; }
+.title-info:hover .title-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+.title-info::after {
+  content: ''; position: absolute;
+  top: calc(100% + 4px); left: 4px;
+  border: 6px solid transparent; border-bottom-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  z-index: 101;
+}
+.title-info:hover::after { opacity: 1; }
+/* Inside the tab nav, snug the "?" to its button (.tab-nav already has gap:4px). */
+.tab-nav .title-info { margin-left: 0; }
+
+/* Intro banner - always-visible "about this view" callout that sits at the
+   top of each tab panel. Replaces the hover-only title-info popovers next to
+   each tab button so the per-view framing is exposed by default. One banner
+   per tab so the copy swaps with the active tab. */
+.intro-banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 22px 32px 26px;
+}
+.intro-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  border-left: 3px solid var(--trpa-blue);
+  padding: 4px 0 4px 18px;
+}
+.intro-banner-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--trpa-blue);
+  margin-bottom: 8px;
+}
+.intro-banner p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--text-mid);
+  margin-bottom: 10px;
+}
+.intro-banner p:last-child { margin-bottom: 0; }
+.intro-banner p strong { color: var(--text-dark); font-weight: 600; }
+@media (max-width: 768px) {
+  .intro-banner { padding: 16px 18px; }
+}
+
 .header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
 header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
 .header-sub { font-size: 0.86rem; color: var(--trpa-ice); margin-top: 4px; opacity: 0.95; max-width: 760px; }
@@ -414,16 +498,6 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
 .footnote a { color: var(--trpa-blue); text-decoration: none; }
 .footnote a:hover { text-decoration: underline; }
 .footnote strong { color: var(--text-mid); font-weight: 600; }
-/* "Related views" cross-link strip; sits between main content + footnote */
-.related-dashboards {
-  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
-  font-size: 0.82rem; color: var(--text-mid);
-  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-}
-.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
-.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
-.related-dashboards a:hover { text-decoration: underline; }
-
 /* ── Loading ── */
 #loading-overlay { position: fixed; inset: 0; background: rgba(0, 59, 113, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; }
 .loading-card { background: #fff; border-radius: 10px; padding: 36px 48px; text-align: center; min-width: 260px; }
@@ -468,6 +542,7 @@ footer a:hover { text-decoration: underline; }
       <h1>Allocation Tracking</h1>
       <div class="header-sub" id="header-sub">Basin overview by commodity and per-jurisdiction pool balances for residential, commercial, and tourist allocations.</div>
     </div>
+    <a class="header-back" href="index.html">&larr; Return to Main Menu</a>
   </div>
 </header>
 
@@ -486,6 +561,13 @@ footer a:hover { text-decoration: underline; }
 <!-- TAB 1: Basin overview - layer 10 Grand Total snapshot rendered as
      stacked-bar tiles per commodity. -->
 <div class="tab-panel active" id="tab-overview">
+  <aside class="intro-banner" aria-label="About this view">
+    <div class="intro-banner-inner">
+      <div class="intro-banner-eyebrow">About this view &middot; Basin overview by commodity</div>
+      <p><strong>The Lake Tahoe Regional Plan Growth Management System limits the total amount of additional development allowed in the region. This dashboard displays the status of the additional development allowed under the Regional Plan.</strong></p>
+      <p>If reserved development rights are not used by a project, the development rights will be returned to the pool from which the rights were allocated. Unreleased amounts include rights held by TRPA that have not been made available, including remaining residential allocations that are metered out annually and commercial floor area from the 2012 Regional Plan that will only be made available after the remaining commercial floor area from the 1987 Regional Plan is exhausted.</p>
+    </div>
+  </aside>
   <div class="section">
     <div id="commodity-donuts" class="donut-grid"></div>
   </div>
@@ -496,6 +578,14 @@ footer a:hover { text-decoration: underline; }
      drilldown detail panel + commodity-aware explainer. All JS lives inside
      the PoolBalancesTab IIFE at the bottom of the page. -->
 <div class="tab-panel" id="tab-pools">
+
+  <aside class="intro-banner" aria-label="About this view">
+    <div class="intro-banner-inner">
+      <div class="intro-banner-eyebrow">About this view &middot; Pool balances by jurisdiction</div>
+      <p><strong>The Lake Tahoe Regional Plan Growth Management System limits the total amount of additional development allowed in the Region. Additional development is assigned to TRPA, county, or city pools to be allocated to permitted projects.</strong></p>
+      <p>Commodities that are assigned to projects include allocations that have been constructed and permitted or reserved allocations that are not completed. If reserved development rights are not used by a project, the development rights will be returned to the pool from which the rights were allocated. Unreleased amounts include rights held by TRPA that have not been made available, including remaining residential allocations that are metered out annually and commercial floor area from the 2012 Regional Plan that will only be made available after the remaining commercial floor area from the 1987 Regional Plan is exhausted.</p>
+    </div>
+  </aside>
 
   <!-- KPI strip: Regional Plan max / assigned / not assigned / unreleased
        for the selected commodity. Unreleased only carries values for RES
@@ -552,14 +642,6 @@ footer a:hover { text-decoration: underline; }
       <div class="detail-empty" id="pbc-detail-empty" style="display:none;">No pool selected.</div>
     </div>
   </div>
-</div>
-
-<!-- Related views: cross-link strip -->
-<div class="related-dashboards">
-  <strong>Related views:</strong>
-  <a href="tahoe-development-tracker.html">&larr; Tahoe Development Snapshot (executive overview)</a>
-  <a href="residential-additions-by-source.html">&rarr; Residential Additions by Source</a>
-  <a href="index.html">All dashboards</a>
 </div>
 
 <!-- Footnote: link text is the layer / table NAME (not "layer N"), so the

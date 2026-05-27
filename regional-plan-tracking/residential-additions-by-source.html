@@ -50,6 +50,86 @@ header { background: var(--trpa-navy); color: #fff; display: flex; align-items: 
 .header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
 .header-logo img { height: 58px; width: auto; display: block; }
 .header-text { flex: 1; min-width: 0; }
+.header-back {
+  flex-shrink: 0;
+  color: var(--trpa-ice);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-back:hover { color: #fff; text-decoration: underline; }
+
+/* Title-info popover - intro tooltip next to the dashboard's h1. */
+.title-info { position: relative; display: inline-flex; align-items: center; vertical-align: middle; margin-left: 12px; }
+.title-info-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--trpa-ice); color: var(--trpa-navy);
+  font-size: 0.85rem; font-weight: 700;
+  cursor: help; transition: background 0.12s, color 0.12s;
+}
+.title-info-icon:hover { background: #fff; color: var(--trpa-navy); }
+.title-info-popover {
+  position: absolute; top: calc(100% + 10px); left: -4px;
+  width: 440px; max-width: calc(100vw - 80px);
+  background: #fff; border: 1px solid var(--trpa-ice); border-radius: 6px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  font-size: 0.86rem; line-height: 1.55; color: var(--text-mid);
+  letter-spacing: 0; text-transform: none; font-weight: 400;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+.title-info-popover strong { color: var(--text-dark); font-weight: 600; }
+.title-info-popover p { margin-bottom: 8px; }
+.title-info-popover p:last-child { margin-bottom: 0; }
+.title-info:hover .title-info-popover { opacity: 1; pointer-events: auto; transform: translateY(-2px); }
+.title-info::after {
+  content: ''; position: absolute;
+  top: calc(100% + 4px); left: 4px;
+  border: 6px solid transparent; border-bottom-color: var(--trpa-ice);
+  opacity: 0; pointer-events: none; transition: opacity 0.15s;
+  z-index: 101;
+}
+.title-info:hover::after { opacity: 1; }
+
+/* Intro banner - always-visible "about this dashboard" callout that sits
+   directly below the header. Replaces the hover-only title-info popover so
+   the framing is exposed by default rather than hidden behind a hover target
+   most visitors never discover. */
+.intro-banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 22px 32px 26px;
+}
+.intro-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  border-left: 3px solid var(--trpa-blue);
+  padding: 4px 0 4px 18px;
+}
+.intro-banner-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--trpa-blue);
+  margin-bottom: 8px;
+}
+.intro-banner p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--text-mid);
+  margin-bottom: 10px;
+}
+.intro-banner p:last-child { margin-bottom: 0; }
+.intro-banner p strong { color: var(--text-dark); font-weight: 600; }
+@media (max-width: 768px) {
+  .intro-banner { padding: 16px 18px; }
+}
+
 .header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
 header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
 .header-sub { font-size: 0.86rem; color: var(--trpa-ice); margin-top: 4px; opacity: 0.95; max-width: 760px; }
@@ -139,16 +219,6 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
   border-top: 1px solid var(--border);
 }
 .footnote code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.7rem; }
-/* "Related views" cross-link strip; sits between main content + footnote */
-.related-dashboards {
-  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
-  font-size: 0.82rem; color: var(--text-mid);
-  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-}
-.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
-.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
-.related-dashboards a:hover { text-decoration: underline; }
-
 @media (max-width: 1100px) {
   .split { grid-template-columns: 1fr; }
 }
@@ -200,14 +270,23 @@ footer a:hover { text-decoration: underline; }
         Where completed residential units came from each year, 2013&ndash;2025.
       </div>
     </div>
+    <a class="header-back" href="index.html">&larr; Return to Main Menu</a>
   </div>
 </header>
+
+<aside class="intro-banner" aria-label="About this dashboard">
+  <div class="intro-banner-inner">
+    <div class="intro-banner-eyebrow">About this dashboard</div>
+    <p><strong>The Residential Additions by Source dashboard displays the sources of changes in residential units in the Tahoe Region from 2013 through 2025.</strong></p>
+    <p>Residential units may derive from new residential allocations or bonus units under the Lake Tahoe Regional Plan, or development from existing, or previously existing units that were transferred, converted, or constructed from previously assigned units.</p>
+  </div>
+</aside>
 
 <!-- KPIs (values derived from SOURCES + REMOVED after loadAdditions() runs) -->
 <div class="kpi-row">
   <div class="kpi-card">
     <div class="kpi-accent" style="background:var(--trpa-navy)"></div>
-    <div class="kpi-label">Total completed <span id="kpi-range">&hellip;</span></div>
+    <div class="kpi-label">Net change <span id="kpi-range">&hellip;</span></div>
     <div class="kpi-value" id="kpi-total">&hellip;</div>
     <div class="kpi-sub" id="kpi-total-sub">&hellip;</div>
   </div>
@@ -278,13 +357,6 @@ footer a:hover { text-decoration: underline; }
 </div>
 
 <!-- Footnote -->
-<div class="related-dashboards">
-  <strong>Related views:</strong>
-  <a href="development_history.html">&harr; Development History (year-over-year change per commodity)</a>
-  <a href="tahoe-development-tracker.html">&larr; Tahoe Development Snapshot (basin totals)</a>
-  <a href="index.html">All dashboards</a>
-</div>
-
 <div class="footnote">
   <strong>Source:</strong> Tahoe Regional Planning Agency. Residential units completed per year by the type of development right used.</div>
 
@@ -700,11 +772,17 @@ function renderKPIs() {
   const yrTo   = YEARS[YEARS.length - 1];
   const span   = yrTo - yrFrom + 1;
 
-  // KPI 1: total completed across the visible range
-  const sumAll = SOURCES.reduce((s, src) => s + src.data.reduce((a, b) => a + b, 0), 0);
+  // KPI 1: net change across the visible range. Gross added (allocations +
+  // bonus + transfers + conversions + banked) minus removed (to bank + to
+  // conversion) gives the true delta in residential unit count. REMOVED data
+  // is stored as negative values (so it plots below the axis on the removed
+  // chart), so we take the absolute value here for the human-readable subtitle.
+  const sumAll     = SOURCES.reduce((s, src) => s + src.data.reduce((a, b) => a + b, 0), 0);
+  const absRemoved = Math.abs(REMOVED.reduce((s, src) => s + src.data.reduce((a, b) => a + b, 0), 0));
+  const netChange  = sumAll - absRemoved;
   document.getElementById('kpi-range').textContent     = yrFrom + '-' + yrTo;
-  document.getElementById('kpi-total').textContent     = sumAll.toLocaleString();
-  document.getElementById('kpi-total-sub').textContent = 'Avg ' + Math.round(sumAll / span).toLocaleString() + ' units/yr across ' + span + ' years';
+  document.getElementById('kpi-total').textContent     = netChange.toLocaleString();
+  document.getElementById('kpi-total-sub').textContent = sumAll.toLocaleString() + ' units added and ' + absRemoved.toLocaleString() + ' removed';
 
   // KPI 2: largest source overall
   const ranked = SOURCES.map(s => ({ name: s.name, total: s.data.reduce((a, b) => a + b, 0) })).sort((a, b) => b.total - a.total);

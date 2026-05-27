@@ -45,6 +45,15 @@ header { background: var(--trpa-navy); color: #fff; display: flex; align-items: 
 .header-logo { flex-shrink: 0; display: inline-block; text-decoration: none; }
 .header-logo img { height: 58px; width: auto; display: block; }
 .header-text { flex: 1; min-width: 0; }
+.header-back {
+  flex-shrink: 0;
+  color: var(--trpa-ice);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-back:hover { color: #fff; text-decoration: underline; }
 .header-eyebrow { font-size: 0.66rem; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--trpa-ice); margin-bottom: 4px; }
 header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spacing: -0.01em; }
 @media (max-width: 600px) {
@@ -87,6 +96,41 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
   z-index: 101;
 }
 .title-info:hover::after { opacity: 1; }
+
+/* Intro banner - always-visible "about this dashboard" callout that sits
+   directly below the header. Replaces the hover-only title-info popover so
+   the framing is exposed by default rather than hidden behind a hover target
+   most visitors never discover. */
+.intro-banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 22px 32px 26px;
+}
+.intro-banner-inner {
+  max-width: 1280px;
+  margin: 0 auto;
+  border-left: 3px solid var(--trpa-blue);
+  padding: 4px 0 4px 18px;
+}
+.intro-banner-eyebrow {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--trpa-blue);
+  margin-bottom: 8px;
+}
+.intro-banner p {
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--text-mid);
+  margin-bottom: 10px;
+}
+.intro-banner p:last-child { margin-bottom: 0; }
+.intro-banner p strong { color: var(--text-dark); font-weight: 600; }
+@media (max-width: 768px) {
+  .intro-banner { padding: 16px 18px; }
+}
 
 /* Inline "?" affordance for ctrl-bar labels (e.g., Jurisdictions ?  for the
    Carson County context). 14px ice circle on a light background. */
@@ -156,16 +200,6 @@ header h1 { font-weight: 700; font-size: 1.55rem; line-height: 1.2; letter-spaci
 .footnote a:hover { text-decoration: underline; }
 .footnote strong { color: var(--text-mid); font-weight: 600; }
 .footnote code { background: var(--bg); padding: 1px 5px; border-radius: 3px; font-size: 0.9em; }
-/* "Related views" cross-link strip; sits between main content + footnote */
-.related-dashboards {
-  padding: 14px 40px; background: var(--bg); border-top: 1px solid var(--border);
-  font-size: 0.82rem; color: var(--text-mid);
-  display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
-}
-.related-dashboards strong { color: var(--text-dark); font-weight: 700; }
-.related-dashboards a { color: var(--trpa-blue); text-decoration: none; font-weight: 600; }
-.related-dashboards a:hover { text-decoration: underline; }
-
 @media (max-width: 900px) {
   header .header-content, .ctrl-bar, .section, .footnote { padding-left: 18px; padding-right: 18px; }
 }
@@ -206,21 +240,23 @@ footer a:hover { text-decoration: underline; }
       <img src="assets/trpa-logo-color.png" alt="TRPA" />
     </a>
     <div class="header-text">
-      <h1>Development Since the 2012 Regional Plan<span class="title-info" aria-label="What does this dashboard show?">
-        <span class="title-info-icon">?</span>
-        <div class="title-info-popover">
-          <strong>Cumulative trends and year-over-year change in basin development.</strong>
-          <p>The <strong>top chart</strong> is the cumulative trajectory over time - the running on-the-ground total for residential, commercial, and tourist development.</p>
-          <p>The <strong>bottom chart</strong> is the net year-over-year change - how much was added or removed each year, per commodity. Negative bars are net removals.</p>
-          <p>Use the jurisdiction buttons below to view the data for the entire Tahoe Region or to filter to a single jurisdiction.</p>
-        </div>
-      </span></h1>
+      <h1>Development Since the 2012 Regional Plan</h1>
       <div class="header-sub">
-        Year-over-year change in residential, commercial, and tourist development across the Tahoe Region. Live from the Parcel Development History layer.
+        Year-over-year change in residential, commercial, and tourist development across the Tahoe Region.
       </div>
     </div>
+    <a class="header-back" href="index.html">&larr; Return to Main Menu</a>
   </div>
 </header>
+
+<aside class="intro-banner" aria-label="About this dashboard">
+  <div class="intro-banner-inner">
+    <div class="intro-banner-eyebrow">About this dashboard</div>
+    <p><strong>The Development Since the 2012 Regional Plan dashboard displays the current estimated totals for existing residential, commercial, and tourist development in the Tahoe Basin since adoption of the updated Lake Tahoe Regional Plan in 2012.</strong></p>
+    <p>The Regional Plan, originally adopted in 1987, promotes environmentally friendly redevelopment of the aging built environment into compact, mixed-use development town centers that connect residents and visitors to work, home, and outdoors without the need for a personal vehicle. The 2012 updates to the Regional Plan accelerate attainment of environmental goals in part by improving the regulatory framework in the region.</p>
+    <p>Explore development since 2012 in the Tahoe Basin by local jurisdiction using the toggles below.</p>
+  </div>
+</aside>
 
 <!-- Filter bar: jurisdiction pills only. The year slider was removed since
      its only role was to set the "as of" year for the KPI cards (which are
@@ -255,13 +291,6 @@ footer a:hover { text-decoration: underline; }
     <p>Net change each year.</p>
     <div id="delta-chart" style="height:340px;"></div>
   </div>
-</div>
-
-<div class="related-dashboards">
-  <strong>Related views:</strong>
-  <a href="residential-additions-by-source.html">&harr; Residential Additions by Source (where each year's units came from)</a>
-  <a href="tahoe-development-tracker.html">&larr; Tahoe Development Snapshot (executive overview)</a>
-  <a href="index.html">All dashboards</a>
 </div>
 
 <div class="footnote">
